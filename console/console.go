@@ -28,12 +28,12 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/dop251/goja"
 	"github.com/DxChainNetwork/dxc/console/prompt"
 	"github.com/DxChainNetwork/dxc/internal/jsre"
 	"github.com/DxChainNetwork/dxc/internal/jsre/deps"
 	"github.com/DxChainNetwork/dxc/internal/web3ext"
 	"github.com/DxChainNetwork/dxc/rpc"
+	"github.com/dop251/goja"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 )

@@ -25,7 +25,6 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/docker/docker/pkg/reexec"
 	"github.com/DxChainNetwork/dxc/crypto"
 	"github.com/DxChainNetwork/dxc/log"
 	"github.com/DxChainNetwork/dxc/node"
@@ -33,6 +32,7 @@ import (
 	"github.com/DxChainNetwork/dxc/p2p/enode"
 	"github.com/DxChainNetwork/dxc/p2p/enr"
 	"github.com/DxChainNetwork/dxc/rpc"
+	"github.com/docker/docker/pkg/reexec"
 	"github.com/gorilla/websocket"
 )
 

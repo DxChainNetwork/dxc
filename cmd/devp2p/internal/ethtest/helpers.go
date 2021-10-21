@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/core/types"
 	"github.com/DxChainNetwork/dxc/crypto"
@@ -31,6 +30,7 @@ import (
 	"github.com/DxChainNetwork/dxc/internal/utesting"
 	"github.com/DxChainNetwork/dxc/p2p"
 	"github.com/DxChainNetwork/dxc/p2p/rlpx"
+	"github.com/davecgh/go-spew/spew"
 )
 
 var (

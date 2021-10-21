@@ -27,8 +27,8 @@ import (
 	"sync"
 	"time"
 
-	mapset "github.com/deckarep/golang-set"
 	"github.com/DxChainNetwork/dxc/log"
+	mapset "github.com/deckarep/golang-set"
 	"github.com/gorilla/websocket"
 )
 

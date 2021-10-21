@@ -24,9 +24,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/pkg/reexec"
 	"github.com/DxChainNetwork/dxc/internal/cmdtest"
 	"github.com/DxChainNetwork/dxc/rpc"
+	"github.com/docker/docker/pkg/reexec"
 )
 
 func tmpdir(t *testing.T) string {

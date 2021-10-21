@@ -30,13 +30,13 @@ import (
 	"testing"
 	"testing/quick"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/crypto"
 	"github.com/DxChainNetwork/dxc/ethdb"
 	"github.com/DxChainNetwork/dxc/ethdb/leveldb"
 	"github.com/DxChainNetwork/dxc/ethdb/memorydb"
 	"github.com/DxChainNetwork/dxc/rlp"
+	"github.com/davecgh/go-spew/spew"
 	"golang.org/x/crypto/sha3"
 )
 

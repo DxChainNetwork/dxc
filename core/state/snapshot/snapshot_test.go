@@ -23,10 +23,10 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/VictoriaMetrics/fastcache"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/core/rawdb"
 	"github.com/DxChainNetwork/dxc/rlp"
+	"github.com/VictoriaMetrics/fastcache"
 )
 
 // randomHash generates a random blob of data and returns it as a hash.

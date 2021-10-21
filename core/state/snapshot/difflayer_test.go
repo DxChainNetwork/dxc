@@ -21,10 +21,10 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/VictoriaMetrics/fastcache"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/crypto"
 	"github.com/DxChainNetwork/dxc/ethdb/memorydb"
+	"github.com/VictoriaMetrics/fastcache"
 )
 
 func copyDestructs(destructs map[common.Hash]struct{}) map[common.Hash]struct{} {

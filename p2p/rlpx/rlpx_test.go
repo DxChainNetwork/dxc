@@ -28,11 +28,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/DxChainNetwork/dxc/crypto"
 	"github.com/DxChainNetwork/dxc/crypto/ecies"
 	"github.com/DxChainNetwork/dxc/p2p/simulations/pipes"
 	"github.com/DxChainNetwork/dxc/rlp"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 )
 

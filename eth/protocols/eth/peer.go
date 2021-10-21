@@ -21,11 +21,11 @@ import (
 	"math/rand"
 	"sync"
 
-	mapset "github.com/deckarep/golang-set"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/core/types"
 	"github.com/DxChainNetwork/dxc/p2p"
 	"github.com/DxChainNetwork/dxc/rlp"
+	mapset "github.com/deckarep/golang-set"
 )
 
 const (

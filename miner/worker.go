@@ -25,7 +25,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	mapset "github.com/deckarep/golang-set"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/consensus"
 	"github.com/DxChainNetwork/dxc/consensus/misc"
@@ -36,6 +35,7 @@ import (
 	"github.com/DxChainNetwork/dxc/log"
 	"github.com/DxChainNetwork/dxc/params"
 	"github.com/DxChainNetwork/dxc/trie"
+	mapset "github.com/deckarep/golang-set"
 )
 
 const (

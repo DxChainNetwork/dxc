@@ -20,11 +20,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/VictoriaMetrics/fastcache"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/core/rawdb"
 	"github.com/DxChainNetwork/dxc/ethdb"
 	"github.com/DxChainNetwork/dxc/trie"
+	"github.com/VictoriaMetrics/fastcache"
 	lru "github.com/hashicorp/golang-lru"
 )
 

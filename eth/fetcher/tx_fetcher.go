@@ -23,13 +23,13 @@ import (
 	"sort"
 	"time"
 
-	mapset "github.com/deckarep/golang-set"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/common/mclock"
 	"github.com/DxChainNetwork/dxc/core"
 	"github.com/DxChainNetwork/dxc/core/types"
 	"github.com/DxChainNetwork/dxc/log"
 	"github.com/DxChainNetwork/dxc/metrics"
+	mapset "github.com/deckarep/golang-set"
 )
 
 const (

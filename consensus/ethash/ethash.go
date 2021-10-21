@@ -33,11 +33,11 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/edsrzf/mmap-go"
 	"github.com/DxChainNetwork/dxc/consensus"
 	"github.com/DxChainNetwork/dxc/log"
 	"github.com/DxChainNetwork/dxc/metrics"
 	"github.com/DxChainNetwork/dxc/rpc"
+	"github.com/edsrzf/mmap-go"
 	"github.com/hashicorp/golang-lru/simplelru"
 )
 

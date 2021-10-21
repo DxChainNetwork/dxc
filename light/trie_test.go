@@ -23,7 +23,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/DxChainNetwork/dxc/consensus/ethash"
 	"github.com/DxChainNetwork/dxc/core"
 	"github.com/DxChainNetwork/dxc/core/rawdb"
@@ -31,6 +30,7 @@ import (
 	"github.com/DxChainNetwork/dxc/core/vm"
 	"github.com/DxChainNetwork/dxc/params"
 	"github.com/DxChainNetwork/dxc/trie"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func TestNodeIterator(t *testing.T) {

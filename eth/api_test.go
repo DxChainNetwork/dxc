@@ -24,11 +24,11 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/core/rawdb"
 	"github.com/DxChainNetwork/dxc/core/state"
 	"github.com/DxChainNetwork/dxc/crypto"
+	"github.com/davecgh/go-spew/spew"
 )
 
 var dumper = spew.ConfigState{Indent: "    "}

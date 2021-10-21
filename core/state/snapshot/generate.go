@@ -24,7 +24,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/VictoriaMetrics/fastcache"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/common/hexutil"
 	"github.com/DxChainNetwork/dxc/common/math"
@@ -36,6 +35,7 @@ import (
 	"github.com/DxChainNetwork/dxc/metrics"
 	"github.com/DxChainNetwork/dxc/rlp"
 	"github.com/DxChainNetwork/dxc/trie"
+	"github.com/VictoriaMetrics/fastcache"
 )
 
 var (

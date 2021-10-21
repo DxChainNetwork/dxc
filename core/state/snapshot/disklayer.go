@@ -20,12 +20,12 @@ import (
 	"bytes"
 	"sync"
 
-	"github.com/VictoriaMetrics/fastcache"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/core/rawdb"
 	"github.com/DxChainNetwork/dxc/ethdb"
 	"github.com/DxChainNetwork/dxc/rlp"
 	"github.com/DxChainNetwork/dxc/trie"
+	"github.com/VictoriaMetrics/fastcache"
 )
 
 // diskLayer is a low level persistent snapshot built on top of a key-value store.

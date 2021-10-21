@@ -27,10 +27,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cespare/cp"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/DxChainNetwork/dxc/accounts"
 	"github.com/DxChainNetwork/dxc/common"
+	"github.com/cespare/cp"
+	"github.com/davecgh/go-spew/spew"
 )
 
 var (

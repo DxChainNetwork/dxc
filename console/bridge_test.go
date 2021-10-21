@@ -19,8 +19,8 @@ package console
 import (
 	"testing"
 
-	"github.com/dop251/goja"
 	"github.com/DxChainNetwork/dxc/internal/jsre"
+	"github.com/dop251/goja"
 )
 
 // TestUndefinedAsParam ensures that personal functions can receive

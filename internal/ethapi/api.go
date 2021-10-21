@@ -26,7 +26,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/DxChainNetwork/dxc/accounts"
 	"github.com/DxChainNetwork/dxc/accounts/abi"
 	"github.com/DxChainNetwork/dxc/accounts/keystore"
@@ -48,6 +47,7 @@ import (
 	"github.com/DxChainNetwork/dxc/params"
 	"github.com/DxChainNetwork/dxc/rlp"
 	"github.com/DxChainNetwork/dxc/rpc"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/tyler-smith/go-bip39"
 )
 

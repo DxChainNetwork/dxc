@@ -23,9 +23,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/VictoriaMetrics/fastcache"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/core/rawdb"
+	"github.com/VictoriaMetrics/fastcache"
 )
 
 // TestAccountIteratorBasics tests some simple single-layer(diff and disk) iteration

@@ -34,12 +34,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/docker/docker/pkg/reexec"
 	"github.com/DxChainNetwork/dxc/log"
 	"github.com/DxChainNetwork/dxc/node"
 	"github.com/DxChainNetwork/dxc/p2p"
 	"github.com/DxChainNetwork/dxc/p2p/enode"
 	"github.com/DxChainNetwork/dxc/rpc"
+	"github.com/docker/docker/pkg/reexec"
 	"github.com/gorilla/websocket"
 )
 

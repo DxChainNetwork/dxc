@@ -22,9 +22,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/DxChainNetwork/dxc/crypto"
 	"github.com/DxChainNetwork/dxc/p2p/simulations/pipes"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func TestProtocolHandshake(t *testing.T) {

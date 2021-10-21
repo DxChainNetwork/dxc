@@ -25,13 +25,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/VictoriaMetrics/fastcache"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/core/rawdb"
 	"github.com/DxChainNetwork/dxc/ethdb"
 	"github.com/DxChainNetwork/dxc/log"
 	"github.com/DxChainNetwork/dxc/metrics"
 	"github.com/DxChainNetwork/dxc/rlp"
+	"github.com/VictoriaMetrics/fastcache"
 )
 
 var (

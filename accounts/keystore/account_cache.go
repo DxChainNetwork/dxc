@@ -27,10 +27,10 @@ import (
 	"sync"
 	"time"
 
-	mapset "github.com/deckarep/golang-set"
 	"github.com/DxChainNetwork/dxc/accounts"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/log"
+	mapset "github.com/deckarep/golang-set"
 )
 
 // Minimum amount of time between cache reloads. This limit applies if the platform does

@@ -25,7 +25,6 @@ import (
 	"math/big"
 	"time"
 
-	mapset "github.com/deckarep/golang-set"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/common/bitutil"
 	"github.com/DxChainNetwork/dxc/core"
@@ -36,6 +35,7 @@ import (
 	"github.com/DxChainNetwork/dxc/params"
 	"github.com/DxChainNetwork/dxc/rlp"
 	"github.com/DxChainNetwork/dxc/trie"
+	mapset "github.com/deckarep/golang-set"
 )
 
 // IndexerConfig includes a set of configs for chain indexers.

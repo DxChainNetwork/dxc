@@ -30,11 +30,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/DxChainNetwork/dxc/common/hexutil"
 	"github.com/DxChainNetwork/dxc/common/mclock"
 	"github.com/DxChainNetwork/dxc/crypto"
 	"github.com/DxChainNetwork/dxc/p2p/enode"
+	"github.com/davecgh/go-spew/spew"
 )
 
 // To regenerate discv5 test vectors, run

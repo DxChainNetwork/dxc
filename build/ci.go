@@ -58,10 +58,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cespare/cp"
 	"github.com/DxChainNetwork/dxc/crypto/signify"
 	"github.com/DxChainNetwork/dxc/internal/build"
 	"github.com/DxChainNetwork/dxc/params"
+	"github.com/cespare/cp"
 )
 
 var (

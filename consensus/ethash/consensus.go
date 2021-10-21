@@ -24,7 +24,6 @@ import (
 	"runtime"
 	"time"
 
-	mapset "github.com/deckarep/golang-set"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/common/math"
 	"github.com/DxChainNetwork/dxc/consensus"
@@ -34,6 +33,7 @@ import (
 	"github.com/DxChainNetwork/dxc/params"
 	"github.com/DxChainNetwork/dxc/rlp"
 	"github.com/DxChainNetwork/dxc/trie"
+	mapset "github.com/deckarep/golang-set"
 	"golang.org/x/crypto/sha3"
 )
 

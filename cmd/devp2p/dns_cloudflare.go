@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cloudflare/cloudflare-go"
 	"github.com/DxChainNetwork/dxc/log"
 	"github.com/DxChainNetwork/dxc/p2p/dnsdisc"
+	"github.com/cloudflare/cloudflare-go"
 	"gopkg.in/urfave/cli.v1"
 )
 

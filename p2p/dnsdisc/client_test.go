@@ -25,13 +25,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/DxChainNetwork/dxc/common/mclock"
 	"github.com/DxChainNetwork/dxc/crypto"
 	"github.com/DxChainNetwork/dxc/internal/testlog"
 	"github.com/DxChainNetwork/dxc/log"
 	"github.com/DxChainNetwork/dxc/p2p/enode"
 	"github.com/DxChainNetwork/dxc/p2p/enr"
+	"github.com/davecgh/go-spew/spew"
 )
 
 const (

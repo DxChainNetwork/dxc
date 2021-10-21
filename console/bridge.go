@@ -24,13 +24,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dop251/goja"
 	"github.com/DxChainNetwork/dxc/accounts/scwallet"
 	"github.com/DxChainNetwork/dxc/accounts/usbwallet"
 	"github.com/DxChainNetwork/dxc/common/hexutil"
 	"github.com/DxChainNetwork/dxc/console/prompt"
 	"github.com/DxChainNetwork/dxc/internal/jsre"
 	"github.com/DxChainNetwork/dxc/rpc"
+	"github.com/dop251/goja"
 )
 
 // bridge is a collection of JavaScript utility methods to bride the .js runtime

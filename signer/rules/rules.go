@@ -22,12 +22,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/dop251/goja"
 	"github.com/DxChainNetwork/dxc/internal/ethapi"
 	"github.com/DxChainNetwork/dxc/log"
 	"github.com/DxChainNetwork/dxc/signer/core"
 	"github.com/DxChainNetwork/dxc/signer/rules/deps"
 	"github.com/DxChainNetwork/dxc/signer/storage"
+	"github.com/dop251/goja"
 )
 
 var (
