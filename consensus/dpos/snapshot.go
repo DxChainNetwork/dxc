@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package congress
+package dpos
 
 import (
 	"bytes"
@@ -31,8 +31,8 @@ import (
 
 // Snapshot is the state of the authorization voting at a given point in time.
 type Snapshot struct {
-	config   *params.CongressConfig // Consensus engine parameters to fine tune behavior
-	sigcache *lru.ARCCache          // Cache of recent block signatures to speed up ecrecover
+	config   *params.DposConfig // Consensus engine parameters to fine tune behavior
+	sigcache *lru.ARCCache      // Cache of recent block signatures to speed up ecrecover
 
 	Number     uint64                      `json:"number"`     // Block number where the snapshot was created
 	Hash       common.Hash                 `json:"hash"`       // Block hash where the snapshot was created
@@ -50,7 +50,7 @@ func (s validatorsAscending) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 // newSnapshot creates a new snapshot with the specified startup parameters. This
 // method does not initialize the set of recent validators, so only ever use if for
 // the genesis block.
-func newSnapshot(config *params.CongressConfig, sigcache *lru.ARCCache, number uint64, hash common.Hash, validators []common.Address) *Snapshot {
+func newSnapshot(config *params.DposConfig, sigcache *lru.ARCCache, number uint64, hash common.Hash, validators []common.Address) *Snapshot {
 	snap := &Snapshot{
 		config:     config,
 		sigcache:   sigcache,
@@ -66,8 +66,8 @@ func newSnapshot(config *params.CongressConfig, sigcache *lru.ARCCache, number u
 }
 
 // loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(config *params.CongressConfig, sigcache *lru.ARCCache, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
-	blob, err := db.Get(append([]byte("congress-"), hash[:]...))
+func loadSnapshot(config *params.DposConfig, sigcache *lru.ARCCache, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
+	blob, err := db.Get(append([]byte("dpos-"), hash[:]...))
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (s *Snapshot) store(db ethdb.Database) error {
 	if err != nil {
 		return err
 	}
-	return db.Put(append([]byte("congress-"), s.Hash[:]...), blob)
+	return db.Put(append([]byte("dpos-"), s.Hash[:]...), blob)
 }
 
 // copy creates a deep copy of the snapshot, though not the individual votes.

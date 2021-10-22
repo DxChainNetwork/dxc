@@ -308,7 +308,7 @@ func InspectDatabase(db ethdb.Database, keyPrefix, keyStart []byte) error {
 		preimages       stat
 		bloomBits       stat
 		cliqueSnaps     stat
-		congressSnaps   stat
+		dposSnaps       stat
 
 		// Ancient store statistics
 		ancientHeadersSize  common.StorageSize
@@ -368,8 +368,8 @@ func InspectDatabase(db ethdb.Database, keyPrefix, keyStart []byte) error {
 			bloomBits.Add(size)
 		case bytes.HasPrefix(key, []byte("clique-")) && len(key) == 7+common.HashLength:
 			cliqueSnaps.Add(size)
-		case bytes.HasPrefix(key, []byte("congress-")) && len(key) == 7+common.HashLength:
-			congressSnaps.Add(size)
+		case bytes.HasPrefix(key, []byte("dpos-")) && len(key) == 7+common.HashLength:
+			dposSnaps.Add(size)
 		case bytes.HasPrefix(key, []byte("cht-")) ||
 			bytes.HasPrefix(key, []byte("chtIndexV2-")) ||
 			bytes.HasPrefix(key, []byte("chtRootV2-")): // Canonical hash trie
@@ -431,7 +431,7 @@ func InspectDatabase(db ethdb.Database, keyPrefix, keyStart []byte) error {
 		{"Key-Value store", "Account snapshot", accountSnaps.Size(), accountSnaps.Count()},
 		{"Key-Value store", "Storage snapshot", storageSnaps.Size(), storageSnaps.Count()},
 		{"Key-Value store", "Clique snapshots", cliqueSnaps.Size(), cliqueSnaps.Count()},
-		{"Key-Value store", "Congress snapshots", congressSnaps.Size(), congressSnaps.Count()},
+		{"Key-Value store", "Dpos snapshots", dposSnaps.Size(), dposSnaps.Count()},
 		{"Key-Value store", "Singleton metadata", metadata.Size(), metadata.Count()},
 		{"Ancient store", "Headers", ancientHeadersSize.String(), ancients.String()},
 		{"Ancient store", "Bodies", ancientBodiesSize.String(), ancients.String()},

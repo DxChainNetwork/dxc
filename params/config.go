@@ -59,9 +59,9 @@ var (
 		LondonBlock:         big.NewInt(8577000),
 		SophonBlock:         big.NewInt(8577000),
 
-		Congress: &CongressConfig{
+		Dpos: &DposConfig{
 			Period: 3,
-			Epoch:  200,
+			Epoch:  100,
 
 			EnableDevVerification: true,
 		},
@@ -85,9 +85,9 @@ var (
 		BerlinBlock:         big.NewInt(8290000),
 		LondonBlock:         big.NewInt(8290000),
 		SophonBlock:         big.NewInt(8290000),
-		Congress: &CongressConfig{
+		Dpos: &DposConfig{
 			Period: 3,
-			Epoch:  200,
+			Epoch:  100,
 		},
 	}
 
@@ -210,9 +210,9 @@ type ChainConfig struct {
 	SophonBlock   *big.Int `json:"sophonBlock,omitempty"`
 
 	// Various consensus engines
-	Ethash   *EthashConfig   `json:"ethash,omitempty"`
-	Clique   *CliqueConfig   `json:"clique,omitempty"`
-	Congress *CongressConfig `json:"congress,omitempty"`
+	Ethash *EthashConfig `json:"ethash,omitempty"`
+	Clique *CliqueConfig `json:"clique,omitempty"`
+	Dpos   *DposConfig   `json:"dpos,omitempty"`
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -234,8 +234,8 @@ func (c *CliqueConfig) String() string {
 	return "clique"
 }
 
-// CongressConfig is the consensus engine configs for proof-of-stake-authority based sealing.
-type CongressConfig struct {
+// DposConfig is the consensus engine configs for proof-of-stake-authority based sealing.
+type DposConfig struct {
 	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
 	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
 
@@ -243,8 +243,8 @@ type CongressConfig struct {
 }
 
 // String implements the stringer interface, returning the consensus engine details.
-func (c *CongressConfig) String() string {
-	return "congress"
+func (d *DposConfig) String() string {
+	return "dpos"
 }
 
 // String implements the fmt.Stringer interface.
@@ -255,8 +255,8 @@ func (c *ChainConfig) String() string {
 		engine = c.Ethash
 	case c.Clique != nil:
 		engine = c.Clique
-	case c.Congress != nil:
-		engine = c.Congress
+	case c.Dpos != nil:
+		engine = c.Dpos
 	default:
 		engine = "unknown"
 	}

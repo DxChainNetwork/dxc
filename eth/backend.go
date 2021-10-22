@@ -20,6 +20,7 @@ package eth
 import (
 	"errors"
 	"fmt"
+
 	"math/big"
 	"runtime"
 	"sync"
@@ -31,7 +32,7 @@ import (
 	"github.com/DxChainNetwork/dxc/common/hexutil"
 	"github.com/DxChainNetwork/dxc/consensus"
 	"github.com/DxChainNetwork/dxc/consensus/clique"
-	"github.com/DxChainNetwork/dxc/consensus/congress"
+	"github.com/DxChainNetwork/dxc/consensus/dpos"
 	"github.com/DxChainNetwork/dxc/core"
 	"github.com/DxChainNetwork/dxc/core/bloombits"
 	"github.com/DxChainNetwork/dxc/core/rawdb"
@@ -210,14 +211,14 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	}
 	eth.txPool = core.NewTxPool(config.TxPool, chainConfig, eth.blockchain)
 
-	// do some extra work if consensus engine is congress.
-	if congressEngine, ok := eth.engine.(*congress.Congress); ok {
+	// do some extra work if consensus engine is dpos.
+	if dposEngine, ok := eth.engine.(*dpos.Dpos); ok {
 		// set state fn
-		congressEngine.SetStateFn(eth.blockchain.StateAt)
+		dposEngine.SetStateFn(eth.blockchain.StateAt)
 		// set consensus-related transaction validator
-		eth.txPool.InitExTxValidator(congressEngine)
+		eth.txPool.InitExTxValidator(dposEngine)
 		//
-		congressEngine.SetChain(eth.blockchain)
+		dposEngine.SetChain(eth.blockchain)
 	}
 
 	// Permit the downloader to use the trie cache allowance during fast sync
@@ -484,7 +485,7 @@ func (s *Ethereum) shouldPreserve(block *types.Block) bool {
 	if _, ok := s.engine.(*clique.Clique); ok {
 		return false
 	}
-	if _, ok := s.engine.(*congress.Congress); ok {
+	if _, ok := s.engine.(*dpos.Dpos); ok {
 		return false
 	}
 	return s.isLocalBlock(block)
@@ -536,13 +537,13 @@ func (s *Ethereum) StartMining(threads int) error {
 			}
 			clique.Authorize(eb, wallet.SignData)
 		}
-		if congress, ok := s.engine.(*congress.Congress); ok {
+		if dpos, ok := s.engine.(*dpos.Dpos); ok {
 			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 			if wallet == nil || err != nil {
 				log.Error("Etherbase account unavailable locally", "err", err)
 				return fmt.Errorf("signer missing: %v", err)
 			}
-			congress.Authorize(eb, wallet.SignData, wallet.SignTx)
+			dpos.Authorize(eb, wallet.SignData, wallet.SignTx)
 		}
 		// If mining is started, we can disable the transaction rejection mechanism
 		// introduced to speed sync times.

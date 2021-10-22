@@ -20,7 +20,7 @@ package web3ext
 var Modules = map[string]string{
 	"admin":    AdminJs,
 	"clique":   CliqueJs,
-	"congress": CongressJs,
+	"dpos":     DposJs,
 	"ethash":   EthashJs,
 	"debug":    DebugJs,
 	"eth":      EthJs,
@@ -90,30 +90,30 @@ web3._extend({
 });
 `
 
-const CongressJs = `
+const DposJs = `
 web3._extend({
-	property: 'congress',
+	property: 'dpos',
 	methods: [
 		new web3._extend.Method({
 			name: 'getSnapshot',
-			call: 'congress_getSnapshot',
+			call: 'dpos_getSnapshot',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getSnapshotAtHash',
-			call: 'congress_getSnapshotAtHash',
+			call: 'dpos_getSnapshotAtHash',
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'getValidators',
-			call: 'congress_getValidators',
+			call: 'dpos_getValidators',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getValidatorsAtHash',
-			call: 'congress_getValidatorsAtHash',
+			call: 'dpos_getValidatorsAtHash',
 			params: 1
 		}),
 	]

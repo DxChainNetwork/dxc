@@ -398,7 +398,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		effectiveTip = cmath.BigMin(st.gasTipCap, new(big.Int).Sub(st.gasFeeCap, st.evm.Context.BaseFee))
 	}
 	tip := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveTip)
-	if st.evm.ChainConfig().Congress != nil {
+	if st.evm.ChainConfig().Dpos != nil {
 		st.state.AddBalance(consensus.FeeRecoder, tip)
 	} else {
 		st.state.AddBalance(st.evm.Context.Coinbase, tip)

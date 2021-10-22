@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package congress implements the proof-of-stake-authority consensus engine.
-package congress
+// Package dpos implements the proof-of-stake-authority consensus engine.
+package dpos
 
 import (
 	"bytes"
@@ -36,8 +36,8 @@ import (
 	"github.com/DxChainNetwork/dxc/accounts/abi"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/consensus"
-	"github.com/DxChainNetwork/dxc/consensus/congress/systemcontract"
-	"github.com/DxChainNetwork/dxc/consensus/congress/vmcaller"
+	"github.com/DxChainNetwork/dxc/consensus/dpos/systemcontract"
+	"github.com/DxChainNetwork/dxc/consensus/dpos/vmcaller"
 	"github.com/DxChainNetwork/dxc/consensus/misc"
 	"github.com/DxChainNetwork/dxc/core/state"
 	"github.com/DxChainNetwork/dxc/core/types"
@@ -71,7 +71,7 @@ const (
 	DirectionBoth
 )
 
-// Congress proof-of-stake-authority protocol constants.
+// Dpos proof-of-stake-authority protocol constants.
 var (
 	epochLength = uint64(30000) // Default number of blocks after which to checkpoint and reset the pending votes
 
@@ -158,8 +158,8 @@ var (
 )
 
 var (
-	getblacklistTimer = metrics.NewRegisteredTimer("congress/blacklist/get", nil)
-	getRulesTimer     = metrics.NewRegisteredTimer("congress/eventcheckrules/get", nil)
+	getblacklistTimer = metrics.NewRegisteredTimer("dpos/blacklist/get", nil)
+	getRulesTimer     = metrics.NewRegisteredTimer("dpos/eventcheckrules/get", nil)
 )
 
 // StateFn gets state by the state root hash.
@@ -194,12 +194,12 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 	return validator, nil
 }
 
-// Congress is the proof-of-stake-authority consensus engine proposed to support the
+// Dpos is the proof-of-stake-authority consensus engine proposed to support the
 // Ethereum testnet following the Ropsten attacks.
-type Congress struct {
-	chainConfig *params.ChainConfig    // ChainConfig to execute evm
-	config      *params.CongressConfig // Consensus engine configuration parameters
-	db          ethdb.Database         // Database to store and retrieve snapshot checkpoints
+type Dpos struct {
+	chainConfig *params.ChainConfig // ChainConfig to execute evm
+	config      *params.DposConfig  // Consensus engine configuration parameters
+	db          ethdb.Database      // Database to store and retrieve snapshot checkpoints
 
 	recents    *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	signatures *lru.ARCCache // Signatures of recent blocks to speed up mining
@@ -228,11 +228,12 @@ type Congress struct {
 	fakeDiff bool // Skip difficulty verifications
 }
 
-// New creates a Congress proof-of-stake-authority consensus engine with the initial
+// New creates a Dpos proof-of-stake-authority consensus engine with the initial
 // validators set to the ones provided by the user.
-func New(chainConfig *params.ChainConfig, db ethdb.Database) *Congress {
+func New(chainConfig *params.ChainConfig, db ethdb.Database) *Dpos {
 	// Set any missing consensus parameters to their defaults
-	conf := *chainConfig.Congress
+	conf := *chainConfig.Dpos
+	log.Info("epoch info", "epoch", conf.Epoch)
 	if conf.Epoch == 0 {
 		conf.Epoch = epochLength
 	}
@@ -244,7 +245,7 @@ func New(chainConfig *params.ChainConfig, db ethdb.Database) *Congress {
 
 	abi := systemcontract.GetInteractiveABI()
 
-	return &Congress{
+	return &Dpos{
 		chainConfig:     chainConfig,
 		config:          &conf,
 		db:              db,
@@ -258,37 +259,37 @@ func New(chainConfig *params.ChainConfig, db ethdb.Database) *Congress {
 	}
 }
 
-func (c *Congress) SetChain(chain consensus.ChainHeaderReader) {
-	c.chain = chain
+func (d *Dpos) SetChain(chain consensus.ChainHeaderReader) {
+	d.chain = chain
 }
 
 // SetStateFn sets the function to get state.
-func (c *Congress) SetStateFn(fn StateFn) {
-	c.stateFn = fn
+func (d *Dpos) SetStateFn(fn StateFn) {
+	d.stateFn = fn
 }
 
 // Author implements consensus.Engine, returning the Ethereum address recovered
 // from the signature in the header's extra-data section.
-func (c *Congress) Author(header *types.Header) (common.Address, error) {
+func (d *Dpos) Author(header *types.Header) (common.Address, error) {
 	return header.Coinbase, nil
-	// return ecrecover(header, c.signatures)
+	// return ecrecover(header, d.signatures)
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules.
-func (c *Congress) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
-	return c.verifyHeader(chain, header, nil)
+func (d *Dpos) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
+	return d.verifyHeader(chain, header, nil)
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers. The
 // method returns a quit channel to abort the operations and a results channel to
 // retrieve the async verifications (the order is that of the input slice).
-func (c *Congress) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+func (d *Dpos) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
 	results := make(chan error, len(headers))
 
 	go func() {
 		for i, header := range headers {
-			err := c.verifyHeader(chain, header, headers[:i])
+			err := d.verifyHeader(chain, header, headers[:i])
 
 			select {
 			case <-abort:
@@ -304,7 +305,7 @@ func (c *Congress) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*t
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
-func (c *Congress) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+func (d *Dpos) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
 		return errUnknownBlock
 	}
@@ -322,7 +323,7 @@ func (c *Congress) verifyHeader(chain consensus.ChainHeaderReader, header *types
 		return errMissingSignature
 	}
 	// check extra data
-	isEpoch := number%c.config.Epoch == 0
+	isEpoch := number%d.config.Epoch == 0
 
 	// Ensure that the extra-data contains a validator list on checkpoint, but none otherwise
 	validatorsBytes := len(header.Extra) - extraVanity - extraSeal
@@ -356,14 +357,14 @@ func (c *Congress) verifyHeader(chain consensus.ChainHeaderReader, header *types
 		return err
 	}
 	// All basic checks passed, verify cascading fields
-	return c.verifyCascadingFields(chain, header, parents)
+	return d.verifyCascadingFields(chain, header, parents)
 }
 
 // verifyCascadingFields verifies all the header fields that are not standalone,
 // rather depend on a batch of previous headers. The caller may optionally pass
 // in a batch of parents (ascending order) to avoid looking those up from the
 // database. This is useful for concurrently verifying a batch of new headers.
-func (c *Congress) verifyCascadingFields(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+func (d *Dpos) verifyCascadingFields(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -380,7 +381,7 @@ func (c *Congress) verifyCascadingFields(chain consensus.ChainHeaderReader, head
 		return consensus.ErrUnknownAncestor
 	}
 
-	if parent.Time+c.config.Period > header.Time {
+	if parent.Time+d.config.Period > header.Time {
 		return ErrInvalidTimestamp
 	}
 
@@ -402,11 +403,11 @@ func (c *Congress) verifyCascadingFields(chain consensus.ChainHeaderReader, head
 	}
 
 	// All basic checks passed, verify the seal and return
-	return c.verifySeal(chain, header, parents)
+	return d.verifySeal(chain, header, parents)
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
-func (c *Congress) snapshot(chain consensus.ChainHeaderReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
+func (d *Dpos) snapshot(chain consensus.ChainHeaderReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (
 		headers []*types.Header
@@ -414,13 +415,13 @@ func (c *Congress) snapshot(chain consensus.ChainHeaderReader, number uint64, ha
 	)
 	for snap == nil {
 		// If an in-memory snapshot was found, use that
-		if s, ok := c.recents.Get(hash); ok {
+		if s, ok := d.recents.Get(hash); ok {
 			snap = s.(*Snapshot)
 			break
 		}
 		// If an on-disk checkpoint snapshot can be found, use that
 		if number%checkpointInterval == 0 {
-			if s, err := loadSnapshot(c.config, c.signatures, c.db, hash); err == nil {
+			if s, err := loadSnapshot(d.config, d.signatures, d.db, hash); err == nil {
 				log.Trace("Loaded voting snapshot from disk", "number", number, "hash", hash)
 				snap = s
 				break
@@ -430,7 +431,7 @@ func (c *Congress) snapshot(chain consensus.ChainHeaderReader, number uint64, ha
 		// at a checkpoint block without a parent (light client CHT), or we have piled
 		// up more headers than allowed to be reorged (chain reinit from a freezer),
 		// consider the checkpoint trusted and snapshot it.
-		if number == 0 || (number%c.config.Epoch == 0 && (len(headers) > params.FullImmutabilityThreshold || chain.GetHeaderByNumber(number-1) == nil)) {
+		if number == 0 || (number%d.config.Epoch == 0 && (len(headers) > params.FullImmutabilityThreshold || chain.GetHeaderByNumber(number-1) == nil)) {
 			checkpoint := chain.GetHeaderByNumber(number)
 			if checkpoint != nil {
 				hash := checkpoint.Hash()
@@ -439,8 +440,8 @@ func (c *Congress) snapshot(chain consensus.ChainHeaderReader, number uint64, ha
 				for i := 0; i < len(validators); i++ {
 					copy(validators[i][:], checkpoint.Extra[extraVanity+i*common.AddressLength:])
 				}
-				snap = newSnapshot(c.config, c.signatures, number, hash, validators)
-				if err := snap.store(c.db); err != nil {
+				snap = newSnapshot(d.config, d.signatures, number, hash, validators)
+				if err := snap.store(d.db); err != nil {
 					return nil, err
 				}
 				log.Info("Stored checkpoint snapshot to disk", "number", number, "hash", hash)
@@ -474,11 +475,11 @@ func (c *Congress) snapshot(chain consensus.ChainHeaderReader, number uint64, ha
 	if err != nil {
 		return nil, err
 	}
-	c.recents.Add(snap.Hash, snap)
+	d.recents.Add(snap.Hash, snap)
 
 	// If we've generated a new checkpoint snapshot, save to disk
 	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
-		if err = snap.store(c.db); err != nil {
+		if err = snap.store(d.db); err != nil {
 			return nil, err
 		}
 		log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
@@ -488,7 +489,7 @@ func (c *Congress) snapshot(chain consensus.ChainHeaderReader, number uint64, ha
 
 // VerifyUncles implements consensus.Engine, always returning an error for any
 // uncles as this consensus mechanism doesn't permit uncles.
-func (c *Congress) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
+func (d *Dpos) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
 	if len(block.Uncles()) > 0 {
 		return errors.New("uncles not allowed")
 	}
@@ -497,28 +498,28 @@ func (c *Congress) VerifyUncles(chain consensus.ChainReader, block *types.Block)
 
 // VerifySeal implements consensus.Engine, checking whether the signature contained
 // in the header satisfies the consensus protocol requirements.
-func (c *Congress) VerifySeal(chain consensus.ChainHeaderReader, header *types.Header) error {
-	return c.verifySeal(chain, header, nil)
+func (d *Dpos) VerifySeal(chain consensus.ChainHeaderReader, header *types.Header) error {
+	return d.verifySeal(chain, header, nil)
 }
 
 // verifySeal checks whether the signature contained in the header satisfies the
 // consensus protocol requirements. The method accepts an optional list of parent
 // headers that aren't yet part of the local blockchain to generate the snapshots
 // from.
-func (c *Congress) verifySeal(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+func (d *Dpos) verifySeal(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
 	// Verifying the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {
 		return errUnknownBlock
 	}
 	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, parents)
+	snap, err := d.snapshot(chain, number-1, header.ParentHash, parents)
 	if err != nil {
 		return err
 	}
 
 	// Resolve the authorization key and check against validators
-	signer, err := ecrecover(header, c.signatures)
+	signer, err := ecrecover(header, d.signatures)
 	if err != nil {
 		return err
 	}
@@ -540,7 +541,7 @@ func (c *Congress) verifySeal(chain consensus.ChainHeaderReader, header *types.H
 	}
 
 	// Ensure that the difficulty corresponds to the turn-ness of the signer
-	if !c.fakeDiff {
+	if !d.fakeDiff {
 		inturn := snap.inturn(header.Number.Uint64(), signer)
 		if inturn && header.Difficulty.Cmp(diffInTurn) != 0 {
 			return errWrongDifficulty
@@ -555,19 +556,19 @@ func (c *Congress) verifySeal(chain consensus.ChainHeaderReader, header *types.H
 
 // Prepare implements consensus.Engine, preparing all the consensus fields of the
 // header for running the transactions on top.
-func (c *Congress) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
+func (d *Dpos) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
 	// If the block isn't a checkpoint, cast a random vote (good enough for now)
-	header.Coinbase = c.validator
+	header.Coinbase = d.validator
 	header.Nonce = types.BlockNonce{}
 
 	number := header.Number.Uint64()
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
+	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return err
 	}
 
 	// Set the correct difficulty
-	header.Difficulty = calcDifficulty(snap, c.validator)
+	header.Difficulty = calcDifficulty(snap, d.validator)
 
 	// Ensure the extra data has all its components
 	if len(header.Extra) < extraVanity {
@@ -575,8 +576,8 @@ func (c *Congress) Prepare(chain consensus.ChainHeaderReader, header *types.Head
 	}
 	header.Extra = header.Extra[:extraVanity]
 
-	if number%c.config.Epoch == 0 {
-		newSortedValidators, err := c.getTopValidators(chain, header)
+	if number%d.config.Epoch == 0 {
+		newSortedValidators, err := d.getTopValidators(chain, header)
 		if err != nil {
 			return err
 		}
@@ -595,7 +596,7 @@ func (c *Congress) Prepare(chain consensus.ChainHeaderReader, header *types.Head
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	header.Time = parent.Time + c.config.Period
+	header.Time = parent.Time + d.config.Period
 	if header.Time < uint64(time.Now().Unix()) {
 		header.Time = uint64(time.Now().Unix())
 	}
@@ -604,17 +605,17 @@ func (c *Congress) Prepare(chain consensus.ChainHeaderReader, header *types.Head
 
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given.
-func (c *Congress) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction, uncles []*types.Header, receipts *[]*types.Receipt, systemTxs []*types.Transaction) error {
+func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction, uncles []*types.Header, receipts *[]*types.Receipt, systemTxs []*types.Transaction) error {
 	// Initialize all system contracts at block 1.
 	if header.Number.Cmp(common.Big1) == 0 {
-		if err := c.initializeSystemContracts(chain, header, state); err != nil {
+		if err := d.initializeSystemContracts(chain, header, state); err != nil {
 			log.Error("Initialize system contracts failed", "err", err)
 			return err
 		}
 	}
 
 	if header.Difficulty.Cmp(diffInTurn) != 0 {
-		if err := c.tryPunishValidator(chain, header, state); err != nil {
+		if err := d.tryPunishValidator(chain, header, state); err != nil {
 			return err
 		}
 	}
@@ -631,14 +632,14 @@ func (c *Congress) Finalize(chain consensus.ChainHeaderReader, header *types.Hea
 
 	// execute block reward tx.
 	if len(*txs) > 0 {
-		if err := c.trySendBlockReward(chain, header, state); err != nil {
+		if err := d.trySendBlockReward(chain, header, state); err != nil {
 			return err
 		}
 	}
 
 	// do epoch thing at the end, because it will update active validators
-	if header.Number.Uint64()%c.config.Epoch == 0 {
-		newValidators, err := c.doSomethingAtEpoch(chain, header, state)
+	if header.Number.Uint64()%d.config.Epoch == 0 {
+		newValidators, err := d.doSomethingAtEpoch(chain, header, state)
 		if err != nil {
 			return err
 		}
@@ -656,7 +657,7 @@ func (c *Congress) Finalize(chain consensus.ChainHeaderReader, header *types.Hea
 
 	//handle system governance Proposal
 	if chain.Config().IsRedCoast(header.Number) {
-		proposalCount, err := c.getPassedProposalCount(chain, header, state)
+		proposalCount, err := d.getPassedProposalCount(chain, header, state)
 		if err != nil {
 			return err
 		}
@@ -668,13 +669,13 @@ func (c *Congress) Finalize(chain consensus.ChainHeaderReader, header *types.Hea
 		// passed proposals, and then finish then all.
 		pIds := make([]*big.Int, 0, proposalCount)
 		for i := uint32(0); i < proposalCount; i++ {
-			prop, err := c.getPassedProposalByIndex(chain, header, state, i)
+			prop, err := d.getPassedProposalByIndex(chain, header, state, i)
 			if err != nil {
 				return err
 			}
 			// execute the system governance Proposal
 			tx := systemTxs[int(i)]
-			receipt, err := c.replayProposal(chain, header, state, prop, len(*txs), tx)
+			receipt, err := d.replayProposal(chain, header, state, prop, len(*txs), tx)
 			if err != nil {
 				return err
 			}
@@ -685,7 +686,7 @@ func (c *Congress) Finalize(chain consensus.ChainHeaderReader, header *types.Hea
 		}
 		// Finish all proposal
 		for i := uint32(0); i < proposalCount; i++ {
-			err = c.finishProposalById(chain, header, state, pIds[i])
+			err = d.finishProposalById(chain, header, state, pIds[i])
 			if err != nil {
 				return err
 			}
@@ -701,7 +702,7 @@ func (c *Congress) Finalize(chain consensus.ChainHeaderReader, header *types.Hea
 
 // FinalizeAndAssemble implements consensus.Engine, ensuring no uncles are set,
 // nor block rewards given, and returns the final block.
-func (c *Congress) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (b *types.Block, rs []*types.Receipt, err error) {
+func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (b *types.Block, rs []*types.Receipt, err error) {
 	defer func() {
 		if err != nil {
 			log.Warn("FinalizeAndAssemble failed", "err", err)
@@ -709,28 +710,37 @@ func (c *Congress) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	}()
 	// Initialize all system contracts at block 1.
 	if header.Number.Cmp(common.Big1) == 0 {
-		if err := c.initializeSystemContracts(chain, header, state); err != nil {
+		if err := d.initializeSystemContracts(chain, header, state); err != nil {
 			panic(err)
 		}
 	}
 
 	// punish validator if necessary
 	if header.Difficulty.Cmp(diffInTurn) != 0 {
-		if err := c.tryPunishValidator(chain, header, state); err != nil {
+		if err := d.tryPunishValidator(chain, header, state); err != nil {
 			panic(err)
 		}
 	}
 
 	// deposit block reward if any tx exists.
 	if len(txs) > 0 {
-		if err := c.trySendBlockReward(chain, header, state); err != nil {
+		if err := d.trySendBlockReward(chain, header, state); err != nil {
 			panic(err)
 		}
 	}
 
 	// do epoch thing at the end, because it will update active validators
-	if header.Number.Uint64()%c.config.Epoch == 0 {
-		if _, err := c.doSomethingAtEpoch(chain, header, state); err != nil {
+	newSortedValidators, err := d.getTopValidators(chain, header)
+	if len(newSortedValidators) != 0 {
+		log.Info("getTopValidators", "validators", newSortedValidators[0].String())
+	} else {
+		log.Info("getTopValidators", "validators", 0)
+	}
+
+	log.Info("Epoch info", "epoch", d.config.Epoch, "blocknum", header.Number.Uint64())
+	log.Info("validator contract", "address", systemcontract.GetValidatorAddr(new(big.Int).Sub(header.Number, common.Big1), d.chainConfig))
+	if header.Number.Uint64()%d.config.Epoch == 0 {
+		if _, err := d.doSomethingAtEpoch(chain, header, state); err != nil {
 			panic(err)
 		}
 	}
@@ -741,8 +751,8 @@ func (c *Congress) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	// Even if the miner is not `running`, it's still working,
 	// the 'miner.worker' will try to FinalizeAndAssemble a block,
 	// in this case, the signTxFn is not set. A `non-miner node` can't execute system governance proposal.
-	if c.signTxFn != nil && chain.Config().IsRedCoast(header.Number) {
-		proposalCount, err := c.getPassedProposalCount(chain, header, state)
+	if d.signTxFn != nil && chain.Config().IsRedCoast(header.Number) {
+		proposalCount, err := d.getPassedProposalCount(chain, header, state)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -752,12 +762,12 @@ func (c *Congress) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header
 		// passed proposals, and then finish then all.
 		pIds := make([]*big.Int, 0, proposalCount)
 		for i := uint32(0); i < proposalCount; i++ {
-			prop, err := c.getPassedProposalByIndex(chain, header, state, i)
+			prop, err := d.getPassedProposalByIndex(chain, header, state, i)
 			if err != nil {
 				return nil, nil, err
 			}
 			// execute the system governance Proposal
-			tx, receipt, err := c.executeProposal(chain, header, state, prop, len(txs))
+			tx, receipt, err := d.executeProposal(chain, header, state, prop, len(txs))
 			if err != nil {
 				return nil, nil, err
 			}
@@ -768,7 +778,7 @@ func (c *Congress) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header
 		}
 		// Finish all proposal
 		for i := uint32(0); i < proposalCount; i++ {
-			err = c.finishProposalById(chain, header, state, pIds[i])
+			err = d.finishProposalById(chain, header, state, pIds[i])
 			if err != nil {
 				return nil, nil, err
 			}
@@ -783,7 +793,7 @@ func (c *Congress) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	return types.NewBlock(header, txs, nil, receipts, new(trie.Trie)), receipts, nil
 }
 
-func (c *Congress) trySendBlockReward(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
+func (d *Dpos) trySendBlockReward(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
 	fee := state.GetBalance(consensus.FeeRecoder)
 	if fee.Cmp(common.Big0) <= 0 {
 		return nil
@@ -795,25 +805,25 @@ func (c *Congress) trySendBlockReward(chain consensus.ChainHeaderReader, header 
 	state.SetBalance(consensus.FeeRecoder, common.Big0)
 
 	method := "distributeBlockReward"
-	data, err := c.abi[systemcontract.ValidatorsContractName].Pack(method)
+	data, err := d.abi[systemcontract.ValidatorsContractName].Pack(method)
 	if err != nil {
 		log.Error("Can't pack data for distributeBlockReward", "err", err)
 		return err
 	}
 
 	nonce := state.GetNonce(header.Coinbase)
-	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetValidatorAddr(header.Number, c.chainConfig), nonce, fee, math.MaxUint64, new(big.Int), data, true)
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetValidatorAddr(header.Number, d.chainConfig), nonce, fee, math.MaxUint64, new(big.Int), data, true)
 
-	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
+	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c *Congress) tryPunishValidator(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
+func (d *Dpos) tryPunishValidator(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
 	number := header.Number.Uint64()
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
+	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return err
 	}
@@ -828,7 +838,7 @@ func (c *Congress) tryPunishValidator(chain consensus.ChainHeaderReader, header 
 		}
 	}
 	if !signedRecently {
-		if err := c.punishValidator(outTurnValidator, chain, header, state); err != nil {
+		if err := d.punishValidator(outTurnValidator, chain, header, state); err != nil {
 			return err
 		}
 	}
@@ -836,18 +846,19 @@ func (c *Congress) tryPunishValidator(chain consensus.ChainHeaderReader, header 
 	return nil
 }
 
-func (c *Congress) doSomethingAtEpoch(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) ([]common.Address, error) {
-	newSortedValidators, err := c.getTopValidators(chain, header)
+func (d *Dpos) doSomethingAtEpoch(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) ([]common.Address, error) {
+	newSortedValidators, err := d.getTopValidators(chain, header)
+	log.Info("getTopValidators", "validators", newSortedValidators[0].String())
 	if err != nil {
 		return []common.Address{}, err
 	}
 
 	// update contract new validators if new set exists
-	if err := c.updateValidators(newSortedValidators, chain, header, state); err != nil {
+	if err := d.updateValidators(newSortedValidators, chain, header, state); err != nil {
 		return []common.Address{}, err
 	}
 	//  decrease validator missed blocks counter at epoch
-	if err := c.decreaseMissedBlocksCounter(chain, header, state); err != nil {
+	if err := d.decreaseMissedBlocksCounter(chain, header, state); err != nil {
 		return []common.Address{}, err
 	}
 
@@ -855,8 +866,8 @@ func (c *Congress) doSomethingAtEpoch(chain consensus.ChainHeaderReader, header 
 }
 
 // initializeSystemContracts initializes all genesis system contracts.
-func (c *Congress) initializeSystemContracts(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
-	snap, err := c.snapshot(chain, 0, header.ParentHash, nil)
+func (d *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
+	snap, err := d.snapshot(chain, 0, header.ParentHash, nil)
 	if err != nil {
 		return err
 	}
@@ -872,11 +883,11 @@ func (c *Congress) initializeSystemContracts(chain consensus.ChainHeaderReader, 
 		packFun func() ([]byte, error)
 	}{
 		{systemcontract.ValidatorsContractAddr, func() ([]byte, error) {
-			return c.abi[systemcontract.ValidatorsContractName].Pack(method, genesisValidators)
+			return d.abi[systemcontract.ValidatorsContractName].Pack(method, genesisValidators)
 		}},
-		{systemcontract.PunishContractAddr, func() ([]byte, error) { return c.abi[systemcontract.PunishContractName].Pack(method) }},
+		{systemcontract.PunishContractAddr, func() ([]byte, error) { return d.abi[systemcontract.PunishContractName].Pack(method) }},
 		{systemcontract.ProposalAddr, func() ([]byte, error) {
-			return c.abi[systemcontract.ProposalContractName].Pack(method, genesisValidators)
+			return d.abi[systemcontract.ProposalContractName].Pack(method, genesisValidators)
 		}},
 	}
 
@@ -889,7 +900,7 @@ func (c *Congress) initializeSystemContracts(chain consensus.ChainHeaderReader, 
 		nonce := state.GetNonce(header.Coinbase)
 		msg := vmcaller.NewLegacyMessage(header.Coinbase, &contract.addr, nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
 
-		if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
+		if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig); err != nil {
 			return err
 		}
 	}
@@ -898,33 +909,33 @@ func (c *Congress) initializeSystemContracts(chain consensus.ChainHeaderReader, 
 }
 
 // call this at epoch block to get top validators based on the state of epoch block - 1
-func (c *Congress) getTopValidators(chain consensus.ChainHeaderReader, header *types.Header) ([]common.Address, error) {
+func (d *Dpos) getTopValidators(chain consensus.ChainHeaderReader, header *types.Header) ([]common.Address, error) {
 	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	if parent == nil {
 		return []common.Address{}, consensus.ErrUnknownAncestor
 	}
-	statedb, err := c.stateFn(parent.Root)
+	statedb, err := d.stateFn(parent.Root)
 	if err != nil {
 		return []common.Address{}, err
 	}
 
 	method := "getTopValidators"
-	data, err := c.abi[systemcontract.ValidatorsContractName].Pack(method)
+	data, err := d.abi[systemcontract.ValidatorsContractName].Pack(method)
 	if err != nil {
 		log.Error("Can't pack data for getTopValidators", "error", err)
 		return []common.Address{}, err
 	}
 
-	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetValidatorAddr(parent.Number, c.chainConfig), 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetValidatorAddr(parent.Number, d.chainConfig), 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 
 	// use parent
-	result, err := vmcaller.ExecuteMsg(msg, statedb, parent, newChainContext(chain, c), c.chainConfig)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, parent, newChainContext(chain, d), d.chainConfig)
 	if err != nil {
 		return []common.Address{}, err
 	}
 
 	// unpack data
-	ret, err := c.abi[systemcontract.ValidatorsContractName].Unpack(method, result)
+	ret, err := d.abi[systemcontract.ValidatorsContractName].Unpack(method, result)
 	if err != nil {
 		return []common.Address{}, err
 	}
@@ -939,10 +950,10 @@ func (c *Congress) getTopValidators(chain consensus.ChainHeaderReader, header *t
 	return validators, err
 }
 
-func (c *Congress) updateValidators(vals []common.Address, chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
+func (d *Dpos) updateValidators(vals []common.Address, chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
 	// method
 	method := "updateActiveValidatorSet"
-	data, err := c.abi[systemcontract.ValidatorsContractName].Pack(method, vals, new(big.Int).SetUint64(c.config.Epoch))
+	data, err := d.abi[systemcontract.ValidatorsContractName].Pack(method, vals, new(big.Int).SetUint64(d.config.Epoch))
 	if err != nil {
 		log.Error("Can't pack data for updateActiveValidatorSet", "error", err)
 		return err
@@ -950,8 +961,8 @@ func (c *Congress) updateValidators(vals []common.Address, chain consensus.Chain
 
 	// call contract
 	nonce := state.GetNonce(header.Coinbase)
-	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetValidatorAddr(header.Number, c.chainConfig), nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
-	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetValidatorAddr(header.Number, d.chainConfig), nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
+	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig); err != nil {
 		log.Error("Can't update validators to contract", "err", err)
 		return err
 	}
@@ -959,10 +970,10 @@ func (c *Congress) updateValidators(vals []common.Address, chain consensus.Chain
 	return nil
 }
 
-func (c *Congress) punishValidator(val common.Address, chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
+func (d *Dpos) punishValidator(val common.Address, chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
 	// method
 	method := "punish"
-	data, err := c.abi[systemcontract.PunishContractName].Pack(method, val)
+	data, err := d.abi[systemcontract.PunishContractName].Pack(method, val)
 	if err != nil {
 		log.Error("Can't pack data for punish", "error", err)
 		return err
@@ -970,8 +981,8 @@ func (c *Congress) punishValidator(val common.Address, chain consensus.ChainHead
 
 	// call contract
 	nonce := state.GetNonce(header.Coinbase)
-	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetPunishAddr(header.Number, c.chainConfig), nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
-	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetPunishAddr(header.Number, d.chainConfig), nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
+	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig); err != nil {
 		log.Error("Can't punish validator", "err", err)
 		return err
 	}
@@ -979,10 +990,10 @@ func (c *Congress) punishValidator(val common.Address, chain consensus.ChainHead
 	return nil
 }
 
-func (c *Congress) decreaseMissedBlocksCounter(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
+func (d *Dpos) decreaseMissedBlocksCounter(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
 	// method
 	method := "decreaseMissedBlocksCounter"
-	data, err := c.abi[systemcontract.PunishContractName].Pack(method, new(big.Int).SetUint64(c.config.Epoch))
+	data, err := d.abi[systemcontract.PunishContractName].Pack(method, new(big.Int).SetUint64(d.config.Epoch))
 	if err != nil {
 		log.Error("Can't pack data for decreaseMissedBlocksCounter", "error", err)
 		return err
@@ -990,8 +1001,8 @@ func (c *Congress) decreaseMissedBlocksCounter(chain consensus.ChainHeaderReader
 
 	// call contract
 	nonce := state.GetNonce(header.Coinbase)
-	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetPunishAddr(header.Number, c.chainConfig), nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
-	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetPunishAddr(header.Number, d.chainConfig), nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
+	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig); err != nil {
 		log.Error("Can't decrease missed blocks counter for validator", "err", err)
 		return err
 	}
@@ -1001,18 +1012,18 @@ func (c *Congress) decreaseMissedBlocksCounter(chain consensus.ChainHeaderReader
 
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
-func (c *Congress) Authorize(validator common.Address, signFn ValidatorFn, signTxFn SignTxFn) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+func (d *Dpos) Authorize(validator common.Address, signFn ValidatorFn, signTxFn SignTxFn) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
-	c.validator = validator
-	c.signFn = signFn
-	c.signTxFn = signTxFn
+	d.validator = validator
+	d.signFn = signFn
+	d.signTxFn = signTxFn
 }
 
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
-func (c *Congress) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
+func (d *Dpos) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
 	header := block.Header()
 
 	// Sealing the genesis block is not supported
@@ -1021,17 +1032,17 @@ func (c *Congress) Seal(chain consensus.ChainHeaderReader, block *types.Block, r
 		return errUnknownBlock
 	}
 	// For 0-period chains, refuse to seal empty blocks (no reward but would spin sealing)
-	if c.config.Period == 0 && len(block.Transactions()) == 0 {
+	if d.config.Period == 0 && len(block.Transactions()) == 0 {
 		log.Info("Sealing paused, waiting for transactions")
 		return nil
 	}
 	// Don't hold the val fields for the entire sealing procedure
-	c.lock.RLock()
-	val, signFn := c.validator, c.signFn
-	c.lock.RUnlock()
+	d.lock.RLock()
+	val, signFn := d.validator, d.signFn
+	d.lock.RUnlock()
 
 	// Bail out if we're unauthorized to sign a block
-	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
+	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return err
 	}
@@ -1059,7 +1070,7 @@ func (c *Congress) Seal(chain consensus.ChainHeaderReader, block *types.Block, r
 		log.Trace("Out-of-turn signing requested", "wiggle", common.PrettyDuration(wiggle))
 	}
 	// Sign all the things!
-	sighash, err := signFn(accounts.Account{Address: val}, accounts.MimetypeCongress, CongressRLP(header))
+	sighash, err := signFn(accounts.Account{Address: val}, accounts.MimetypeDpos, DposRLP(header))
 	if err != nil {
 		return err
 	}
@@ -1087,12 +1098,12 @@ func (c *Congress) Seal(chain consensus.ChainHeaderReader, block *types.Block, r
 // that a new block should have:
 // * DIFF_NOTURN(2) if BLOCK_NUMBER % validator_COUNT != validator_INDEX
 // * DIFF_INTURN(1) if BLOCK_NUMBER % validator_COUNT == validator_INDEX
-func (c *Congress) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
-	snap, err := c.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
+func (d *Dpos) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
+	snap, err := d.snapshot(chain, parent.Number.Uint64(), parent.Hash(), nil)
 	if err != nil {
 		return nil
 	}
-	return calcDifficulty(snap, c.validator)
+	return calcDifficulty(snap, d.validator)
 }
 
 func calcDifficulty(snap *Snapshot, validator common.Address) *big.Int {
@@ -1103,22 +1114,22 @@ func calcDifficulty(snap *Snapshot, validator common.Address) *big.Int {
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
-func (c *Congress) SealHash(header *types.Header) common.Hash {
+func (d *Dpos) SealHash(header *types.Header) common.Hash {
 	return SealHash(header)
 }
 
-// Close implements consensus.Engine. It's a noop for congress as there are no background threads.
-func (c *Congress) Close() error {
+// Close implements consensus.Engine. It's a noop for dpos as there are no background threads.
+func (d *Dpos) Close() error {
 	return nil
 }
 
 // APIs implements consensus.Engine, returning the user facing RPC API to allow
 // controlling the validator voting.
-func (c *Congress) APIs(chain consensus.ChainHeaderReader) []rpc.API {
+func (d *Dpos) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 	return []rpc.API{{
-		Namespace: "congress",
+		Namespace: "dpos",
 		Version:   "1.0",
-		Service:   &API{chain: chain, congress: c},
+		Service:   &API{chain: chain, dpos: d},
 		Public:    false,
 	}}
 }
@@ -1131,14 +1142,14 @@ func SealHash(header *types.Header) (hash common.Hash) {
 	return hash
 }
 
-// CongressRLP returns the rlp bytes which needs to be signed for the proof-of-stake-authority
+// DposRLP returns the rlp bytes which needs to be signed for the proof-of-stake-authority
 // sealing. The RLP to sign consists of the entire header apart from the 65 byte signature
 // contained at the end of the extra data.
 //
 // Note, the method requires the extra data to be at least 65 bytes, otherwise it
 // panics. This is done to avoid accidentally using both forms (signature present
 // or not), which could be abused to produce different hashes for the same header.
-func CongressRLP(header *types.Header) []byte {
+func DposRLP(header *types.Header) []byte {
 	b := new(bytes.Buffer)
 	encodeSigHeader(b, header)
 	return b.Bytes()
@@ -1167,18 +1178,18 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 	}
 }
 
-func (c *Congress) PreHandle(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
-	if c.chainConfig.RedCoastBlock != nil && c.chainConfig.RedCoastBlock.Cmp(header.Number) == 0 {
-		return systemcontract.ApplySystemContractUpgrade(systemcontract.SysContractV1, state, header, newChainContext(chain, c), c.chainConfig)
+func (d *Dpos) PreHandle(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
+	if d.chainConfig.RedCoastBlock != nil && d.chainConfig.RedCoastBlock.Cmp(header.Number) == 0 {
+		return systemcontract.ApplySystemContractUpgrade(systemcontract.SysContractV1, state, header, newChainContext(chain, d), d.chainConfig)
 	}
-	if c.chainConfig.SophonBlock != nil && c.chainConfig.SophonBlock.Cmp(header.Number) == 0 {
-		return systemcontract.ApplySystemContractUpgrade(systemcontract.SysContractV2, state, header, newChainContext(chain, c), c.chainConfig)
+	if d.chainConfig.SophonBlock != nil && d.chainConfig.SophonBlock.Cmp(header.Number) == 0 {
+		return systemcontract.ApplySystemContractUpgrade(systemcontract.SysContractV2, state, header, newChainContext(chain, d), d.chainConfig)
 	}
 	return nil
 }
 
 // IsSysTransaction checks whether a specific transaction is a system transaction.
-func (c *Congress) IsSysTransaction(sender common.Address, tx *types.Transaction, header *types.Header) (bool, error) {
+func (d *Dpos) IsSysTransaction(sender common.Address, tx *types.Transaction, header *types.Header) (bool, error) {
 	if tx.To() == nil {
 		return false, nil
 	}
@@ -1198,8 +1209,8 @@ func (c *Congress) IsSysTransaction(sender common.Address, tx *types.Transaction
 //
 // This will queries the system Developers contract, by DIRECTLY to get the target slot value of the contract,
 // it means that it's strongly relative to the layout of the Developers contract's state variables
-func (c *Congress) CanCreate(state consensus.StateReader, addr common.Address, height *big.Int) bool {
-	if c.chainConfig.IsRedCoast(height) && c.config.EnableDevVerification {
+func (d *Dpos) CanCreate(state consensus.StateReader, addr common.Address, height *big.Int) bool {
+	if d.chainConfig.IsRedCoast(height) && d.config.EnableDevVerification {
 		if isDeveloperVerificationEnabled(state) {
 			slot := calcSlotOfDevMappingKey(addr)
 			valueHash := state.GetState(systemcontract.AddressListContractAddr, slot)
@@ -1212,11 +1223,11 @@ func (c *Congress) CanCreate(state consensus.StateReader, addr common.Address, h
 
 // ValidateTx do a consensus-related validation on the given transaction at the given header and state.
 // the parentState must be the state of the header's parent block.
-func (c *Congress) ValidateTx(sender common.Address, tx *types.Transaction, header *types.Header, parentState *state.StateDB) error {
+func (d *Dpos) ValidateTx(sender common.Address, tx *types.Transaction, header *types.Header, parentState *state.StateDB) error {
 	// Must use the parent state for current validation,
 	// so we must starting the validation after redCoastBlock
-	if c.chainConfig.RedCoastBlock != nil && c.chainConfig.RedCoastBlock.Cmp(header.Number) < 0 {
-		m, err := c.getBlacklist(header, parentState)
+	if d.chainConfig.RedCoastBlock != nil && d.chainConfig.RedCoastBlock.Cmp(header.Number) < 0 {
+		m, err := d.getBlacklist(header, parentState)
 		if err != nil {
 			return err
 		}
@@ -1234,31 +1245,31 @@ func (c *Congress) ValidateTx(sender common.Address, tx *types.Transaction, head
 	return nil
 }
 
-func (c *Congress) getBlacklist(header *types.Header, parentState *state.StateDB) (map[common.Address]blacklistDirection, error) {
+func (d *Dpos) getBlacklist(header *types.Header, parentState *state.StateDB) (map[common.Address]blacklistDirection, error) {
 	defer func(start time.Time) {
 		getblacklistTimer.UpdateSince(start)
 	}(time.Now())
 
-	if v, ok := c.blacklists.Get(header.ParentHash); ok {
+	if v, ok := d.blacklists.Get(header.ParentHash); ok {
 		return v.(map[common.Address]blacklistDirection), nil
 	}
 
-	c.blLock.Lock()
-	defer c.blLock.Unlock()
-	if v, ok := c.blacklists.Get(header.ParentHash); ok {
+	d.blLock.Lock()
+	defer d.blLock.Unlock()
+	if v, ok := d.blacklists.Get(header.ParentHash); ok {
 		return v.(map[common.Address]blacklistDirection), nil
 	}
 
 	// if the last updates is long ago, we don't need to get blacklist from the contract.
-	if c.chainConfig.SophonBlock != nil && header.Number.Cmp(c.chainConfig.SophonBlock) > 0 {
+	if d.chainConfig.SophonBlock != nil && header.Number.Cmp(d.chainConfig.SophonBlock) > 0 {
 		num := header.Number.Uint64()
 		lastUpdated := lastBlacklistUpdatedNumber(parentState)
 		if num >= 2 && num > lastUpdated+1 {
-			parent := c.chain.GetHeader(header.ParentHash, num-1)
+			parent := d.chain.GetHeader(header.ParentHash, num-1)
 			if parent != nil {
-				if v, ok := c.blacklists.Get(parent.ParentHash); ok {
+				if v, ok := d.blacklists.Get(parent.ParentHash); ok {
 					m := v.(map[common.Address]blacklistDirection)
-					c.blacklists.Add(header.ParentHash, m)
+					d.blacklists.Add(header.ParentHash, m)
 					return m, nil
 				}
 			} else {
@@ -1268,9 +1279,9 @@ func (c *Congress) getBlacklist(header *types.Header, parentState *state.StateDB
 	}
 
 	// can't get blacklist from cache, try to call the contract
-	alABI := c.abi[systemcontract.AddressListContractName]
+	alABI := d.abi[systemcontract.AddressListContractName]
 	get := func(method string) ([]common.Address, error) {
-		ret, err := c.commonCallContract(header, parentState, alABI, systemcontract.AddressListContractAddr, method, 1)
+		ret, err := d.commonCallContract(header, parentState, alABI, systemcontract.AddressListContractAddr, method, 1)
 		if err != nil {
 			log.Error(fmt.Sprintf("%s failed", method), "err", err)
 			return nil, err
@@ -1302,18 +1313,18 @@ func (c *Congress) getBlacklist(header *types.Header, parentState *state.StateDB
 			m[to] = DirectionTo
 		}
 	}
-	c.blacklists.Add(header.ParentHash, m)
+	d.blacklists.Add(header.ParentHash, m)
 	return m, nil
 }
 
-func (c *Congress) CreateEvmExtraValidator(header *types.Header, parentState *state.StateDB) types.EvmExtraValidator {
-	if c.chainConfig.SophonBlock != nil && c.chainConfig.SophonBlock.Cmp(header.Number) < 0 {
-		blacks, err := c.getBlacklist(header, parentState)
+func (d *Dpos) CreateEvmExtraValidator(header *types.Header, parentState *state.StateDB) types.EvmExtraValidator {
+	if d.chainConfig.SophonBlock != nil && d.chainConfig.SophonBlock.Cmp(header.Number) < 0 {
+		blacks, err := d.getBlacklist(header, parentState)
 		if err != nil {
 			log.Error("getBlacklist failed", "err", err)
 			return nil
 		}
-		rules, err := c.getEventCheckRules(header, parentState)
+		rules, err := d.getEventCheckRules(header, parentState)
 		if err != nil {
 			log.Error("getEventCheckRules failed", "err", err)
 			return nil
@@ -1326,18 +1337,18 @@ func (c *Congress) CreateEvmExtraValidator(header *types.Header, parentState *st
 	return nil
 }
 
-func (c *Congress) getEventCheckRules(header *types.Header, parentState *state.StateDB) (map[common.Hash]*EventCheckRule, error) {
+func (d *Dpos) getEventCheckRules(header *types.Header, parentState *state.StateDB) (map[common.Hash]*EventCheckRule, error) {
 	defer func(start time.Time) {
 		getRulesTimer.UpdateSince(start)
 	}(time.Now())
 
-	if v, ok := c.eventCheckRules.Get(header.ParentHash); ok {
+	if v, ok := d.eventCheckRules.Get(header.ParentHash); ok {
 		return v.(map[common.Hash]*EventCheckRule), nil
 	}
 
-	c.rulesLock.Lock()
-	defer c.rulesLock.Unlock()
-	if v, ok := c.eventCheckRules.Get(header.ParentHash); ok {
+	d.rulesLock.Lock()
+	defer d.rulesLock.Unlock()
+	if v, ok := d.eventCheckRules.Get(header.ParentHash); ok {
 		return v.(map[common.Hash]*EventCheckRule), nil
 	}
 
@@ -1345,11 +1356,11 @@ func (c *Congress) getEventCheckRules(header *types.Header, parentState *state.S
 	num := header.Number.Uint64()
 	lastUpdated := lastRulesUpdatedNumber(parentState)
 	if num >= 2 && num > lastUpdated+1 {
-		parent := c.chain.GetHeader(header.ParentHash, num-1)
+		parent := d.chain.GetHeader(header.ParentHash, num-1)
 		if parent != nil {
-			if v, ok := c.eventCheckRules.Get(parent.ParentHash); ok {
+			if v, ok := d.eventCheckRules.Get(parent.ParentHash); ok {
 				m := v.(map[common.Hash]*EventCheckRule)
-				c.eventCheckRules.Add(header.ParentHash, m)
+				d.eventCheckRules.Add(header.ParentHash, m)
 				return m, nil
 			}
 		} else {
@@ -1358,10 +1369,10 @@ func (c *Congress) getEventCheckRules(header *types.Header, parentState *state.S
 	}
 
 	// can't get blacklist from cache, try to call the contract
-	alABI := c.abi[systemcontract.AddressListContractName]
+	alABI := d.abi[systemcontract.AddressListContractName]
 	method := "getRuleByIndex"
 	get := func(i uint32) (common.Hash, int, common.AddressCheckType, error) {
-		ret, err := c.commonCallContract(header, parentState, alABI, systemcontract.AddressListContractAddr, method, 3, i)
+		ret, err := d.commonCallContract(header, parentState, alABI, systemcontract.AddressListContractAddr, method, 3, i)
 		if err != nil {
 			return common.Hash{}, 0, common.CheckNone, err
 		}
@@ -1372,7 +1383,7 @@ func (c *Congress) getEventCheckRules(header *types.Header, parentState *state.S
 		return sig, int(idx), common.AddressCheckType(ct), nil
 	}
 
-	cnt, err := c.getEventCheckRulesLen(header, parentState)
+	cnt, err := d.getEventCheckRulesLen(header, parentState)
 	if err != nil {
 		log.Error("getEventCheckRulesLen failed", "err", err)
 		return nil, err
@@ -1395,12 +1406,12 @@ func (c *Congress) getEventCheckRules(header *types.Header, parentState *state.S
 		rule.Checks[idx] = ct
 	}
 
-	c.eventCheckRules.Add(header.ParentHash, rules)
+	d.eventCheckRules.Add(header.ParentHash, rules)
 	return rules, nil
 }
 
-func (c *Congress) getEventCheckRulesLen(header *types.Header, parentState *state.StateDB) (int, error) {
-	ret, err := c.commonCallContract(header, parentState, c.abi[systemcontract.AddressListContractName], systemcontract.AddressListContractAddr, "rulesLen", 1)
+func (d *Dpos) getEventCheckRulesLen(header *types.Header, parentState *state.StateDB) (int, error) {
+	ret, err := d.commonCallContract(header, parentState, d.abi[systemcontract.AddressListContractName], systemcontract.AddressListContractAddr, "rulesLen", 1)
 	if err != nil {
 		return 0, err
 	}
@@ -1411,7 +1422,7 @@ func (c *Congress) getEventCheckRulesLen(header *types.Header, parentState *stat
 	return int(ln), nil
 }
 
-func (c *Congress) commonCallContract(header *types.Header, statedb *state.StateDB, contractABI abi.ABI, addr common.Address, method string, expectResultLen int, args ...interface{}) ([]interface{}, error) {
+func (d *Dpos) commonCallContract(header *types.Header, statedb *state.StateDB, contractABI abi.ABI, addr common.Address, method string, expectResultLen int, args ...interface{}) ([]interface{}, error) {
 	data, err := contractABI.Pack(method, args...)
 	if err != nil {
 		log.Error("Can't pack data ", "method", method, "err", err)
@@ -1421,7 +1432,7 @@ func (c *Congress) commonCallContract(header *types.Header, statedb *state.State
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &addr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 
 	// Note: It's safe to use minimalChainContext for executing AddressListContract
-	result, err := vmcaller.ExecuteMsg(msg, statedb, header, newMinimalChainContext(c), c.chainConfig)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, newMinimalChainContext(d), d.chainConfig)
 	if err != nil {
 		return nil, err
 	}
