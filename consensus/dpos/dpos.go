@@ -30,8 +30,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/DxChainNetwork/dxc/metrics"
-
 	"github.com/DxChainNetwork/dxc/accounts"
 	"github.com/DxChainNetwork/dxc/accounts/abi"
 	"github.com/DxChainNetwork/dxc/common"
@@ -44,6 +42,7 @@ import (
 	"github.com/DxChainNetwork/dxc/crypto"
 	"github.com/DxChainNetwork/dxc/ethdb"
 	"github.com/DxChainNetwork/dxc/log"
+	"github.com/DxChainNetwork/dxc/metrics"
 	"github.com/DxChainNetwork/dxc/params"
 	"github.com/DxChainNetwork/dxc/rlp"
 	"github.com/DxChainNetwork/dxc/rpc"
@@ -71,9 +70,10 @@ const (
 	DirectionBoth
 )
 
-// Dpos proof-of-stake-authority protocol constants.
+// Dpos delegated proof-of-stake protocol constants.
 var (
-	epochLength = uint64(30000) // Default number of blocks after which to checkpoint and reset the pending votes
+	// TODO: update epochLength
+	epochLength = uint64(20) // Default number of blocks after which to checkpoint and reset the pending votes
 
 	extraVanity = 32                     // Fixed number of extra-data prefix bytes reserved for validator vanity
 	extraSeal   = crypto.SignatureLength // Fixed number of extra-data suffix bytes reserved for validator seal
@@ -567,6 +567,8 @@ func (d *Dpos) Prepare(chain consensus.ChainHeaderReader, header *types.Header) 
 		return err
 	}
 
+	log.Info("[Prepare]", "snap.validators", snap.validators(), "snap.number", snap.Number, "current header", number, "header.coinbase", header.Coinbase.String())
+
 	// Set the correct difficulty
 	header.Difficulty = calcDifficulty(snap, d.validator)
 
@@ -578,6 +580,9 @@ func (d *Dpos) Prepare(chain consensus.ChainHeaderReader, header *types.Header) 
 
 	if number%d.config.Epoch == 0 {
 		newSortedValidators, err := d.getTopValidators(chain, header)
+
+		log.Info("Prepare header update info", "header", header.Number.Uint64(), "newSortedValidators", newSortedValidators)
+
 		if err != nil {
 			return err
 		}
@@ -615,9 +620,9 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 	}
 
 	if header.Difficulty.Cmp(diffInTurn) != 0 {
-		if err := d.tryPunishValidator(chain, header, state); err != nil {
-			return err
-		}
+		//if err := d.tryPunishValidator(chain, header, state); err != nil {
+		//	return err
+		//}
 	}
 
 	// avoid nil pointer
@@ -655,44 +660,6 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 		}
 	}
 
-	//handle system governance Proposal
-	if chain.Config().IsRedCoast(header.Number) {
-		proposalCount, err := d.getPassedProposalCount(chain, header, state)
-		if err != nil {
-			return err
-		}
-		if proposalCount != uint32(len(systemTxs)) {
-			return errInvalidSysGovCount
-		}
-		// Due to the logics of the finish operation of contract `governance`, when finishing a proposal which
-		// is not the last passed proposal, it will change the sequence. So in here we must first executes all
-		// passed proposals, and then finish then all.
-		pIds := make([]*big.Int, 0, proposalCount)
-		for i := uint32(0); i < proposalCount; i++ {
-			prop, err := d.getPassedProposalByIndex(chain, header, state, i)
-			if err != nil {
-				return err
-			}
-			// execute the system governance Proposal
-			tx := systemTxs[int(i)]
-			receipt, err := d.replayProposal(chain, header, state, prop, len(*txs), tx)
-			if err != nil {
-				return err
-			}
-			*txs = append(*txs, tx)
-			*receipts = append(*receipts, receipt)
-			// set
-			pIds = append(pIds, prop.Id)
-		}
-		// Finish all proposal
-		for i := uint32(0); i < proposalCount; i++ {
-			err = d.finishProposalById(chain, header, state, pIds[i])
-			if err != nil {
-				return err
-			}
-		}
-	}
-
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)
@@ -717,9 +684,9 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 
 	// punish validator if necessary
 	if header.Difficulty.Cmp(diffInTurn) != 0 {
-		if err := d.tryPunishValidator(chain, header, state); err != nil {
-			panic(err)
-		}
+		//if err := d.tryPunishValidator(chain, header, state); err != nil {
+		//	panic(err)
+		//}
 	}
 
 	// deposit block reward if any tx exists.
@@ -729,59 +696,14 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 		}
 	}
 
-	// do epoch thing at the end, because it will update active validators
-	newSortedValidators, err := d.getTopValidators(chain, header)
-	if len(newSortedValidators) != 0 {
-		log.Info("getTopValidators", "validators", newSortedValidators[0].String())
-	} else {
-		log.Info("getTopValidators", "validators", 0)
-	}
+	log.Info("[FinalizeAndAssemble]: validator contract", "address", systemcontract.GetValidatorAddr(new(big.Int).Sub(header.Number, common.Big1), d.chainConfig))
 
-	log.Info("Epoch info", "epoch", d.config.Epoch, "blocknum", header.Number.Uint64())
-	log.Info("validator contract", "address", systemcontract.GetValidatorAddr(new(big.Int).Sub(header.Number, common.Big1), d.chainConfig))
+	// do epoch thing at the end, because it will update active validators
+
 	if header.Number.Uint64()%d.config.Epoch == 0 {
+		log.Info("[FinalizeAndAssemble]: update epoch", "update", true)
 		if _, err := d.doSomethingAtEpoch(chain, header, state); err != nil {
 			panic(err)
-		}
-	}
-
-	//handle system governance Proposal
-	//
-	// Note:
-	// Even if the miner is not `running`, it's still working,
-	// the 'miner.worker' will try to FinalizeAndAssemble a block,
-	// in this case, the signTxFn is not set. A `non-miner node` can't execute system governance proposal.
-	if d.signTxFn != nil && chain.Config().IsRedCoast(header.Number) {
-		proposalCount, err := d.getPassedProposalCount(chain, header, state)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		// Due to the logics of the finish operation of contract `governance`, when finishing a proposal which
-		// is not the last passed proposal, it will change the sequence. So in here we must first executes all
-		// passed proposals, and then finish then all.
-		pIds := make([]*big.Int, 0, proposalCount)
-		for i := uint32(0); i < proposalCount; i++ {
-			prop, err := d.getPassedProposalByIndex(chain, header, state, i)
-			if err != nil {
-				return nil, nil, err
-			}
-			// execute the system governance Proposal
-			tx, receipt, err := d.executeProposal(chain, header, state, prop, len(txs))
-			if err != nil {
-				return nil, nil, err
-			}
-			txs = append(txs, tx)
-			receipts = append(receipts, receipt)
-			// set
-			pIds = append(pIds, prop.Id)
-		}
-		// Finish all proposal
-		for i := uint32(0); i < proposalCount; i++ {
-			err = d.finishProposalById(chain, header, state, pIds[i])
-			if err != nil {
-				return nil, nil, err
-			}
 		}
 	}
 
@@ -821,44 +743,35 @@ func (d *Dpos) trySendBlockReward(chain consensus.ChainHeaderReader, header *typ
 	return nil
 }
 
-func (d *Dpos) tryPunishValidator(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
-	number := header.Number.Uint64()
-	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
-	if err != nil {
-		return err
-	}
-	validators := snap.validators()
-	outTurnValidator := validators[number%uint64(len(validators))]
-	// check sigend recently or not
-	signedRecently := false
-	for _, recent := range snap.Recents {
-		if recent == outTurnValidator {
-			signedRecently = true
-			break
-		}
-	}
-	if !signedRecently {
-		if err := d.punishValidator(outTurnValidator, chain, header, state); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
+//func (d *Dpos) tryPunishValidator(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
+//	number := header.Number.Uint64()
+//	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
+//	if err != nil {
+//		return err
+//	}
+//	validators := snap.validators()
+//	outTurnValidator := validators[number%uint64(len(validators))]
+//	// check sigend recently or not
+//	signedRecently := false
+//	for _, recent := range snap.Recents {
+//		if recent == outTurnValidator {
+//			signedRecently = true
+//			break
+//		}
+//	}
+//	if !signedRecently {
+//		if err := d.punishValidator(outTurnValidator, chain, header, state); err != nil {
+//			return err
+//		}
+//	}
+//
+//	return nil
+//}
 
 func (d *Dpos) doSomethingAtEpoch(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) ([]common.Address, error) {
 	newSortedValidators, err := d.getTopValidators(chain, header)
-	log.Info("getTopValidators", "validators", newSortedValidators[0].String())
-	if err != nil {
-		return []common.Address{}, err
-	}
 
-	// update contract new validators if new set exists
-	if err := d.updateValidators(newSortedValidators, chain, header, state); err != nil {
-		return []common.Address{}, err
-	}
-	//  decrease validator missed blocks counter at epoch
-	if err := d.decreaseMissedBlocksCounter(chain, header, state); err != nil {
+	if err != nil {
 		return []common.Address{}, err
 	}
 
@@ -889,6 +802,14 @@ func (d *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, head
 		{systemcontract.ProposalAddr, func() ([]byte, error) {
 			return d.abi[systemcontract.ProposalContractName].Pack(method, genesisValidators)
 		}},
+		{
+			systemcontract.AddressListContractAddr, func() ([]byte, error) {
+				return d.abi[systemcontract.AddressListContractName].Pack(method, systemcontract.DevAdmin)
+			}},
+		{
+			systemcontract.AddressListContractAddr, func() ([]byte, error) {
+				return d.abi[systemcontract.AddressListContractName].Pack("initializeV2")
+			}},
 	}
 
 	for _, contract := range contracts {
@@ -948,66 +869,6 @@ func (d *Dpos) getTopValidators(chain consensus.ChainHeaderReader, header *types
 	}
 	sort.Sort(validatorsAscending(validators))
 	return validators, err
-}
-
-func (d *Dpos) updateValidators(vals []common.Address, chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
-	// method
-	method := "updateActiveValidatorSet"
-	data, err := d.abi[systemcontract.ValidatorsContractName].Pack(method, vals, new(big.Int).SetUint64(d.config.Epoch))
-	if err != nil {
-		log.Error("Can't pack data for updateActiveValidatorSet", "error", err)
-		return err
-	}
-
-	// call contract
-	nonce := state.GetNonce(header.Coinbase)
-	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetValidatorAddr(header.Number, d.chainConfig), nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
-	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig); err != nil {
-		log.Error("Can't update validators to contract", "err", err)
-		return err
-	}
-
-	return nil
-}
-
-func (d *Dpos) punishValidator(val common.Address, chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
-	// method
-	method := "punish"
-	data, err := d.abi[systemcontract.PunishContractName].Pack(method, val)
-	if err != nil {
-		log.Error("Can't pack data for punish", "error", err)
-		return err
-	}
-
-	// call contract
-	nonce := state.GetNonce(header.Coinbase)
-	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetPunishAddr(header.Number, d.chainConfig), nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
-	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig); err != nil {
-		log.Error("Can't punish validator", "err", err)
-		return err
-	}
-
-	return nil
-}
-
-func (d *Dpos) decreaseMissedBlocksCounter(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
-	// method
-	method := "decreaseMissedBlocksCounter"
-	data, err := d.abi[systemcontract.PunishContractName].Pack(method, new(big.Int).SetUint64(d.config.Epoch))
-	if err != nil {
-		log.Error("Can't pack data for decreaseMissedBlocksCounter", "error", err)
-		return err
-	}
-
-	// call contract
-	nonce := state.GetNonce(header.Coinbase)
-	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetPunishAddr(header.Number, d.chainConfig), nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
-	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig); err != nil {
-		log.Error("Can't decrease missed blocks counter for validator", "err", err)
-		return err
-	}
-
-	return nil
 }
 
 // Authorize injects a private key into the consensus engine to mint new blocks
@@ -1179,12 +1040,12 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 }
 
 func (d *Dpos) PreHandle(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
-	if d.chainConfig.RedCoastBlock != nil && d.chainConfig.RedCoastBlock.Cmp(header.Number) == 0 {
-		return systemcontract.ApplySystemContractUpgrade(systemcontract.SysContractV1, state, header, newChainContext(chain, d), d.chainConfig)
-	}
-	if d.chainConfig.SophonBlock != nil && d.chainConfig.SophonBlock.Cmp(header.Number) == 0 {
-		return systemcontract.ApplySystemContractUpgrade(systemcontract.SysContractV2, state, header, newChainContext(chain, d), d.chainConfig)
-	}
+	//if d.chainConfig.RedCoastBlock != nil && d.chainConfig.RedCoastBlock.Cmp(header.Number) == 0 {
+	//	return systemcontract.ApplySystemContractUpgrade(systemcontract.SysContractV1, state, header, newChainContext(chain, d), d.chainConfig)
+	//}
+	//if d.chainConfig.SophonBlock != nil && d.chainConfig.SophonBlock.Cmp(header.Number) == 0 {
+	//	return systemcontract.ApplySystemContractUpgrade(systemcontract.SysContractV2, state, header, newChainContext(chain, d), d.chainConfig)
+	//}
 	return nil
 }
 

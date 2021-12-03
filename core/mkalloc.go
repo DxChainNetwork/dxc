@@ -86,5 +86,10 @@ func main() {
 	if err := json.NewDecoder(file).Decode(g); err != nil {
 		panic(err)
 	}
-	fmt.Println("const allocData =", makealloc(g))
+	allocData := makealloc(g)
+	outputFile, err := os.OpenFile("./build/bin/genesisAllocRlpData.txt", os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+	outputFile.Write([]byte(allocData))
 }

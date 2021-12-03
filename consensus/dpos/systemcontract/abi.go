@@ -9,110 +9,7 @@ import (
 )
 
 // ValidatorsInteractiveABI contains all methods to interactive with validator contracts.
-const ValidatorsInteractiveABI = `
-[
-	{
-		"inputs": [
-		  {
-			"internalType": "address[]",
-			"name": "vals",
-			"type": "address[]"
-		  }
-		],
-		"name": "initialize",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "distributeBlockReward",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "getTopValidators",
-		"outputs": [
-		  {
-			"internalType": "address[]",
-			"name": "",
-			"type": "address[]"
-		  }
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-		  {
-			"internalType": "address[]",
-			"name": "newSet",
-			"type": "address[]"
-		  },
-		  {
-			"internalType": "uint256",
-			"name": "epoch",
-			"type": "uint256"
-		  }
-		],
-		"name": "updateActiveValidatorSet",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "val",
-          "type": "address"
-        }
-      ],
-      "name": "getValidatorInfo",
-      "outputs": [
-        {
-          "internalType": "address payable",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "enum Validators.Status",
-          "name": "",
-          "type": "uint8"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address[]",
-          "name": "",
-          "type": "address[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    }
-]
-`
+const ValidatorsInteractiveABI = `[{"stateMutability":"payable","type":"fallback"},{"inputs":[{"internalType":"address","name":"_val","type":"address"}],"name":"addValidator","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"distributeBlockReward","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"distributeBlockRewardCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getTopValidators","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"vals","type":"address[]"}],"name":"initialize","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"address","name":"_val","type":"address"}],"name":"removeValidator","outputs":[],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"}]`
 
 const PunishInteractiveABI = `
 [
@@ -544,8 +441,8 @@ var (
 	ProposalAddr             = common.HexToAddress("0x000000000000000000000000000000000000f002")
 	SysGovContractAddr       = common.HexToAddress("0x000000000000000000000000000000000000F003")
 	AddressListContractAddr  = common.HexToAddress("0x000000000000000000000000000000000000F004")
-	ValidatorsV1ContractAddr = common.HexToAddress("0x000000000000000000000000000000000000F005")
-	PunishV1ContractAddr     = common.HexToAddress("0x000000000000000000000000000000000000F006")
+	//ValidatorsV1ContractAddr = common.HexToAddress("0x000000000000000000000000000000000000F005")
+	//PunishV1ContractAddr     = common.HexToAddress("0x000000000000000000000000000000000000F006")
 	// SysGovToAddr is the To address for the system governance transaction, NOT contract address
 	SysGovToAddr = common.HexToAddress("0x000000000000000000000000000000000000ffff")
 
@@ -576,15 +473,9 @@ func GetInteractiveABI() map[string]abi.ABI {
 }
 
 func GetValidatorAddr(blockNum *big.Int, config *params.ChainConfig) *common.Address {
-	if config.IsRedCoast(blockNum) {
-		return &ValidatorsV1ContractAddr
-	}
 	return &ValidatorsContractAddr
 }
 
 func GetPunishAddr(blockNum *big.Int, config *params.ChainConfig) *common.Address {
-	if config.IsRedCoast(blockNum) {
-		return &PunishV1ContractAddr
-	}
 	return &PunishContractAddr
 }
