@@ -798,7 +798,6 @@ func (d *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, head
 		{systemcontract.ValidatorsContractAddr, func() ([]byte, error) {
 			return d.abi[systemcontract.ValidatorsContractName].Pack(method, genesisValidators)
 		}},
-		{systemcontract.PunishContractAddr, func() ([]byte, error) { return d.abi[systemcontract.PunishContractName].Pack(method) }},
 		{systemcontract.ProposalAddr, func() ([]byte, error) {
 			return d.abi[systemcontract.ProposalContractName].Pack(method, genesisValidators)
 		}},
