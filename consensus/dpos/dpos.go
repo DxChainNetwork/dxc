@@ -57,7 +57,7 @@ const (
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 
 	wiggleTime    = 500 * time.Millisecond // Random delay (per validator) to allow concurrent validators
-	maxValidators = 21                     // Max validators allowed to seal.
+	maxValidators = 99                     // Max validators allowed sealing.
 
 	inmemoryBlacklist = 21 // Number of recent blacklist snapshots to keep in memory
 )
@@ -106,14 +106,14 @@ var (
 	errExtraValidators = errors.New("non-checkpoint block contains extra validator list")
 
 	// errInvalidExtraValidators is returned if validator data in extra-data field is invalid.
-	errInvalidExtraValidators = errors.New("Invalid extra validators in extra data field")
+	errInvalidExtraValidators = errors.New("invalid extra validators in extra data field")
 
 	// errInvalidCheckpointValidators is returned if a checkpoint block contains an
-	// invalid list of validators (i.e. non divisible by 20 bytes).
+	// invalid list of validators (i.e. non-divisible by 20 bytes).
 	errInvalidCheckpointValidators = errors.New("invalid validator list on checkpoint block")
 
 	// errMismatchingCheckpointValidators is returned if a checkpoint block contains a
-	// list of validators different than the one the local node calculated.
+	// list of validators different from the one the local node calculated.
 	errMismatchingCheckpointValidators = errors.New("mismatching validator list on checkpoint block")
 
 	// errInvalidMixDigest is returned if a block's mix digest is non-zero.
@@ -149,10 +149,10 @@ var (
 	errRecentlySigned = errors.New("recently signed")
 
 	// errInvalidValidatorLen is returned if validators length is zero or bigger than maxValidators.
-	errInvalidValidatorsLength = errors.New("Invalid validators length")
+	errInvalidValidatorsLength = errors.New("invalid validators length")
 
 	// errInvalidCoinbase is returned if the coinbase isn't the validator of the block.
-	errInvalidCoinbase = errors.New("Invalid coin base")
+	errInvalidCoinbase = errors.New("invalid coinbase")
 
 	errInvalidSysGovCount = errors.New("invalid system governance tx count")
 )
@@ -780,6 +780,10 @@ func (d *Dpos) doSomethingAtEpoch(chain consensus.ChainHeaderReader, header *typ
 
 // initializeSystemContracts initializes all genesis system contracts.
 func (d *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
+	if header.Coinbase == common.BigToAddress(big.NewInt(0)) {
+		return nil
+	}
+
 	snap, err := d.snapshot(chain, 0, header.ParentHash, nil)
 	if err != nil {
 		return err
@@ -795,20 +799,24 @@ func (d *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, head
 		addr    common.Address
 		packFun func() ([]byte, error)
 	}{
+		{systemcontract.ProposalsContractAddr, func() ([]byte, error) {
+			return d.abi[systemcontract.ProposalsContractName].Pack(method, systemcontract.ValidatorsContractAddr)
+		}},
+		{systemcontract.SystemRewardsContractAddr, func() ([]byte, error) {
+			return d.abi[systemcontract.SystemRewardsContractName].Pack(method, systemcontract.ValidatorsContractAddr, systemcontract.NodeVotesContractAddr)
+		}},
 		{systemcontract.ValidatorsContractAddr, func() ([]byte, error) {
-			return d.abi[systemcontract.ValidatorsContractName].Pack(method, genesisValidators)
+			return d.abi[systemcontract.ValidatorsContractName].Pack(method, systemcontract.ProposalsContractAddr, systemcontract.SystemRewardsContractAddr, systemcontract.NodeVotesContractAddr, systemcontract.InitValAddress, systemcontract.InitDeposit, systemcontract.InitRate)
 		}},
-		{systemcontract.ProposalAddr, func() ([]byte, error) {
-			return d.abi[systemcontract.ProposalContractName].Pack(method, genesisValidators)
+		{systemcontract.NodeVotesContractAddr, func() ([]byte, error) {
+			return d.abi[systemcontract.NodeVotesContractName].Pack(method, systemcontract.ValidatorsContractAddr, systemcontract.SystemRewardsContractAddr)
 		}},
-		{
-			systemcontract.AddressListContractAddr, func() ([]byte, error) {
-				return d.abi[systemcontract.AddressListContractName].Pack(method, systemcontract.DevAdmin)
-			}},
-		{
-			systemcontract.AddressListContractAddr, func() ([]byte, error) {
-				return d.abi[systemcontract.AddressListContractName].Pack("initializeV2")
-			}},
+		{systemcontract.AddressListContractAddr, func() ([]byte, error) {
+			return d.abi[systemcontract.AddressListContractName].Pack(method, systemcontract.DevAdmin)
+		}},
+		{systemcontract.AddressListContractAddr, func() ([]byte, error) {
+			return d.abi[systemcontract.AddressListContractName].Pack("initializeV2")
+		}},
 	}
 
 	for _, contract := range contracts {
@@ -816,11 +824,18 @@ func (d *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, head
 		if err != nil {
 			return err
 		}
-
 		nonce := state.GetNonce(header.Coinbase)
-		msg := vmcaller.NewLegacyMessage(header.Coinbase, &contract.addr, nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
+
+		var msg types.Message
+
+		if contract.addr == systemcontract.ValidatorsContractAddr {
+			msg = vmcaller.NewLegacyMessage(header.Coinbase, &contract.addr, nonce, systemcontract.InitDeposit, math.MaxUint64, new(big.Int), data, true)
+		} else {
+			msg = vmcaller.NewLegacyMessage(header.Coinbase, &contract.addr, nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
+		}
 
 		if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig); err != nil {
+			log.Error("initializeSystemContracts execute error", "contract", contract.addr.String())
 			return err
 		}
 	}
@@ -860,11 +875,11 @@ func (d *Dpos) getTopValidators(chain consensus.ChainHeaderReader, header *types
 		return []common.Address{}, err
 	}
 	if len(ret) != 1 {
-		return []common.Address{}, errors.New("Invalid params length")
+		return []common.Address{}, errors.New("invalid params length")
 	}
 	validators, ok := ret[0].([]common.Address)
 	if !ok {
-		return []common.Address{}, errors.New("Invalid validators format")
+		return []common.Address{}, errors.New("invalid validators format")
 	}
 	sort.Sort(validatorsAscending(validators))
 	return validators, err
@@ -1067,7 +1082,7 @@ func (d *Dpos) IsSysTransaction(sender common.Address, tx *types.Transaction, he
 
 // CanCreate determines where a given address can create a new contract.
 //
-// This will queries the system Developers contract, by DIRECTLY to get the target slot value of the contract,
+// This will query the system Developers contract, by DIRECTLY to get the target slot value of the contract,
 // it means that it's strongly relative to the layout of the Developers contract's state variables
 func (d *Dpos) CanCreate(state consensus.StateReader, addr common.Address, height *big.Int) bool {
 	if d.chainConfig.IsRedCoast(height) && d.config.EnableDevVerification {
@@ -1085,7 +1100,7 @@ func (d *Dpos) CanCreate(state consensus.StateReader, addr common.Address, heigh
 // the parentState must be the state of the header's parent block.
 func (d *Dpos) ValidateTx(sender common.Address, tx *types.Transaction, header *types.Header, parentState *state.StateDB) error {
 	// Must use the parent state for current validation,
-	// so we must starting the validation after redCoastBlock
+	// so we must start the validation after redCoastBlock
 	if d.chainConfig.RedCoastBlock != nil && d.chainConfig.RedCoastBlock.Cmp(header.Number) < 0 {
 		m, err := d.getBlacklist(header, parentState)
 		if err != nil {
@@ -1308,7 +1323,7 @@ func (d *Dpos) commonCallContract(header *types.Header, statedb *state.StateDB, 
 	return ret, nil
 }
 
-// Since the state variables are as follow:
+// Since the state variables are as follows:
 //    bool public initialized;
 //    bool public enabled;
 //    address public admin;
