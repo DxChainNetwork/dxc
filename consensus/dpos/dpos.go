@@ -635,11 +635,9 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 		receipts = &rs
 	}
 
-	// execute block reward tx.
-	if len(*txs) > 0 {
-		if err := d.trySendBlockReward(chain, header, state); err != nil {
-			return err
-		}
+	// deposit block reward
+	if err := d.trySendBlockReward(chain, header, state); err != nil {
+		return err
 	}
 
 	// do epoch thing at the end, because it will update active validators
@@ -689,11 +687,9 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 		//}
 	}
 
-	// deposit block reward if any tx exists.
-	if len(txs) > 0 {
-		if err := d.trySendBlockReward(chain, header, state); err != nil {
-			panic(err)
-		}
+	// deposit block reward
+	if err := d.trySendBlockReward(chain, header, state); err != nil {
+		panic(err)
 	}
 
 	log.Info("[FinalizeAndAssemble]: validator contract", "address", systemcontract.GetValidatorAddr(new(big.Int).Sub(header.Number, common.Big1), d.chainConfig))
@@ -716,26 +712,38 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 }
 
 func (d *Dpos) trySendBlockReward(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
-	fee := state.GetBalance(consensus.FeeRecoder)
-	if fee.Cmp(common.Big0) <= 0 {
+	if header.Coinbase == common.BigToAddress(big.NewInt(0)) {
 		return nil
 	}
 
-	// Miner will send tx to deposit block fees to contract, add to his balance first.
-	state.AddBalance(header.Coinbase, fee)
-	// reset fee
+	s := systemcontract.NewSystemRewards()
+	// get Block Reward
+	epochInfo, err := s.GetEpochInfo(state, header, newChainContext(chain, d), d.chainConfig, new(big.Int).Div(header.Number, common.Big0.SetUint64(d.config.Epoch)))
+	if err != nil {
+		log.Error("GetEpochInfo error ", "error", err)
+	}
+
+	log.Info("distributeBlockReward", "BlockReward", epochInfo.BlockReward, "FeeRecoder", state.GetBalance(consensus.FeeRecoder))
+	totalReward := new(big.Int).Add(epochInfo.BlockReward, state.GetBalance(consensus.FeeRecoder))
+	rewardToFoundation := new(big.Int).Div(new(big.Int).Mul(totalReward, big.NewInt(5)), big.NewInt(100))
+	rewardToMiner := new(big.Int).Sub(totalReward, rewardToFoundation)
+
+	state.AddBalance(foundationAddress, rewardToFoundation)
+	state.AddBalance(systemcontract.SystemRewardsContractAddr, rewardToMiner)
+	log.Info("distributeBlockReward", "foundation", state.GetBalance(foundationAddress), "sysAddr", state.GetBalance(systemcontract.SystemRewardsContractAddr))
+
+	// reset tx fee recoder balance
 	state.SetBalance(consensus.FeeRecoder, common.Big0)
 
 	method := "distributeBlockReward"
-	data, err := d.abi[systemcontract.ValidatorsContractName].Pack(method)
+	data, err := d.abi[systemcontract.SystemRewardsContractName].Pack(method, rewardToMiner)
 	if err != nil {
 		log.Error("Can't pack data for distributeBlockReward", "err", err)
 		return err
 	}
 
 	nonce := state.GetNonce(header.Coinbase)
-	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetValidatorAddr(header.Number, d.chainConfig), nonce, fee, math.MaxUint64, new(big.Int), data, true)
-
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &systemcontract.SystemRewardsContractAddr, nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
 	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig); err != nil {
 		return err
 	}
