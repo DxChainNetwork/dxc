@@ -571,27 +571,16 @@ func (d *Dpos) Prepare(chain consensus.ChainHeaderReader, header *types.Header) 
 	// Set the correct difficulty
 	header.Difficulty = calcDifficulty(snap, d.validator)
 
+	// Bail out if we're unauthorized to sign a block
+	if _, authorized := snap.Validators[header.Coinbase]; !authorized {
+		return errUnauthorizedValidator
+	}
+
 	// Ensure the extra data has all its components
 	if len(header.Extra) < extraVanity {
 		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(header.Extra))...)
 	}
 	header.Extra = header.Extra[:extraVanity]
-
-	//if number%d.config.Epoch == 0 {
-	//	newSortedValidators, err := d.getTopValidators(chain, header)
-	//
-	//	log.Info("Prepare header update info", "header", header.Number.Uint64(), "newSortedValidators", newSortedValidators)
-	//
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	for _, validator := range newSortedValidators {
-	//		header.Extra = append(header.Extra, validator.Bytes()...)
-	//	}
-	//}
-	//header.Extra = append(header.Extra, make([]byte, extraSeal)...)
-
 	// Mix digest is reserved for now, set to empty
 	header.MixDigest = common.Hash{}
 
@@ -657,8 +646,8 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 		if err != nil {
 			panic(err)
 		}
-		log.Info("Prepare header update info", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
-
+		log.Info("update epoch", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
+		header.Extra = header.Extra[:extraVanity]
 		for _, validator := range newEpochValidators {
 			header.Extra = append(header.Extra, validator.Bytes()...)
 		}
@@ -735,8 +724,8 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 		if err != nil {
 			panic(err)
 		}
-		log.Info("Prepare header update info", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
-
+		log.Info("update epoch info", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
+		header.Extra = header.Extra[:extraVanity]
 		for _, validator := range newEpochValidators {
 			header.Extra = append(header.Extra, validator.Bytes()...)
 		}
@@ -763,7 +752,7 @@ func (d *Dpos) trySendBlockReward(chain consensus.ChainHeaderReader, header *typ
 
 	s := systemcontract.NewSystemRewards()
 	// get Block Reward
-	epochInfo, err := s.GetEpochInfo(state, header, newChainContext(chain, d), d.chainConfig, new(big.Int).Div(header.Number, common.Big0.SetUint64(d.config.Epoch)))
+	epochInfo, err := s.GetEpochInfo(state, header, newChainContext(chain, d), d.chainConfig, new(big.Int).Div(header.Number, new(big.Int).SetUint64(d.config.Epoch)))
 	if err != nil {
 		log.Error("GetEpochInfo error ", "error", err)
 	}
