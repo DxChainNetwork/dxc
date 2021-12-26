@@ -657,7 +657,7 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 		if err != nil {
 			panic(err)
 		}
-		log.Info("Prepare header update info", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
+		log.Info("update epoch", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
 
 		for _, validator := range newEpochValidators {
 			header.Extra = append(header.Extra, validator.Bytes()...)
@@ -735,7 +735,7 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 		if err != nil {
 			panic(err)
 		}
-		log.Info("Prepare header update info", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
+		log.Info("update epoch info", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
 
 		for _, validator := range newEpochValidators {
 			header.Extra = append(header.Extra, validator.Bytes()...)
