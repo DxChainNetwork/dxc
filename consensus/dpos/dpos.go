@@ -26,7 +26,6 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
-	"sort"
 	"sync"
 	"time"
 
@@ -578,20 +577,20 @@ func (d *Dpos) Prepare(chain consensus.ChainHeaderReader, header *types.Header) 
 	}
 	header.Extra = header.Extra[:extraVanity]
 
-	if number%d.config.Epoch == 0 {
-		newSortedValidators, err := d.getTopValidators(chain, header)
-
-		log.Info("Prepare header update info", "header", header.Number.Uint64(), "newSortedValidators", newSortedValidators)
-
-		if err != nil {
-			return err
-		}
-
-		for _, validator := range newSortedValidators {
-			header.Extra = append(header.Extra, validator.Bytes()...)
-		}
-	}
-	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
+	//if number%d.config.Epoch == 0 {
+	//	newSortedValidators, err := d.getTopValidators(chain, header)
+	//
+	//	log.Info("Prepare header update info", "header", header.Number.Uint64(), "newSortedValidators", newSortedValidators)
+	//
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	for _, validator := range newSortedValidators {
+	//		header.Extra = append(header.Extra, validator.Bytes()...)
+	//	}
+	//}
+	//header.Extra = append(header.Extra, make([]byte, extraSeal)...)
 
 	// Mix digest is reserved for now, set to empty
 	header.MixDigest = common.Hash{}
@@ -642,13 +641,25 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 
 	// do epoch thing at the end, because it will update active validators
 	if header.Number.Uint64()%d.config.Epoch == 0 {
-		newValidators, err := d.doSomethingAtEpoch(chain, header, state)
-		if err != nil {
-			return err
+		log.Info("[FinalizeAndAssemble]: update epoch", "update", true)
+		if err := d.doSomethingAtEpoch(chain, header, state); err != nil {
+			panic(err)
 		}
 
-		validatorsBytes := make([]byte, len(newValidators)*common.AddressLength)
-		for i, validator := range newValidators {
+		newEpochValidators, err := d.getCurEpochValidators(chain, header, state)
+		if err != nil {
+			panic(err)
+		}
+		log.Info("Prepare header update info", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
+
+		for _, validator := range newEpochValidators {
+			header.Extra = append(header.Extra, validator.Bytes()...)
+		}
+
+		header.Extra = append(header.Extra, make([]byte, extraSeal)...)
+
+		validatorsBytes := make([]byte, len(newEpochValidators)*common.AddressLength)
+		for i, validator := range newEpochValidators {
 			copy(validatorsBytes[i*common.AddressLength:], validator.Bytes())
 		}
 
@@ -656,6 +667,8 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 		if !bytes.Equal(header.Extra[extraVanity:extraSuffix], validatorsBytes) {
 			return errInvalidExtraValidators
 		}
+	} else {
+		header.Extra = append(header.Extra, make([]byte, extraSeal)...)
 	}
 
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
@@ -695,13 +708,23 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 	log.Info("[FinalizeAndAssemble]: validator contract", "address", systemcontract.GetValidatorAddr(new(big.Int).Sub(header.Number, common.Big1), d.chainConfig))
 
 	// do epoch thing at the end, because it will update active validators
-
 	if header.Number.Uint64()%d.config.Epoch == 0 {
 		log.Info("[FinalizeAndAssemble]: update epoch", "update", true)
-		if _, err := d.doSomethingAtEpoch(chain, header, state); err != nil {
+		if err := d.doSomethingAtEpoch(chain, header, state); err != nil {
 			panic(err)
 		}
+
+		newEpochValidators, err := d.getCurEpochValidators(chain, header, state)
+		if err != nil {
+			panic(err)
+		}
+		log.Info("Prepare header update info", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
+
+		for _, validator := range newEpochValidators {
+			header.Extra = append(header.Extra, validator.Bytes()...)
+		}
 	}
+	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
 
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -776,14 +799,25 @@ func (d *Dpos) trySendBlockReward(chain consensus.ChainHeaderReader, header *typ
 //	return nil
 //}
 
-func (d *Dpos) doSomethingAtEpoch(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) ([]common.Address, error) {
-	newSortedValidators, err := d.getTopValidators(chain, header)
-
-	if err != nil {
-		return []common.Address{}, err
+func (d *Dpos) doSomethingAtEpoch(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
+	if header.Coinbase == common.BigToAddress(common.Big0) {
+		return nil
 	}
 
-	return newSortedValidators, nil
+	data, err := d.abi[systemcontract.ValidatorsContractName].Pack("tryElect")
+	if err != nil {
+		log.Error("tryElect Pack error", "error", err)
+		return err
+	}
+
+	nonce := state.GetNonce(header.Coinbase)
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &systemcontract.ValidatorsContractAddr, nonce, new(big.Int), math.MaxInt64, new(big.Int), data, true)
+	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig); err != nil {
+		log.Error("tryElect execute error", "error", err)
+		return err
+	}
+
+	return nil
 }
 
 // initializeSystemContracts initializes all genesis system contracts.
@@ -851,28 +885,18 @@ func (d *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, head
 	return nil
 }
 
-// call this at epoch block to get top validators based on the state of epoch block - 1
-func (d *Dpos) getTopValidators(chain consensus.ChainHeaderReader, header *types.Header) ([]common.Address, error) {
-	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
-	if parent == nil {
-		return []common.Address{}, consensus.ErrUnknownAncestor
-	}
-	statedb, err := d.stateFn(parent.Root)
-	if err != nil {
-		return []common.Address{}, err
-	}
+// get current epoch validators after try elect
+func (d *Dpos) getCurEpochValidators(chain consensus.ChainHeaderReader, header *types.Header, statedb *state.StateDB) ([]common.Address, error) {
 
-	method := "getTopValidators"
+	method := "getCurEpochValidators"
 	data, err := d.abi[systemcontract.ValidatorsContractName].Pack(method)
 	if err != nil {
-		log.Error("Can't pack data for getTopValidators", "error", err)
+		log.Error("Can't pack data for curEpochValidators", "error", err)
 		return []common.Address{}, err
 	}
 
-	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetValidatorAddr(parent.Number, d.chainConfig), 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
-
-	// use parent
-	result, err := vmcaller.ExecuteMsg(msg, statedb, parent, newChainContext(chain, d), d.chainConfig)
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &systemcontract.ValidatorsContractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, newChainContext(chain, d), d.chainConfig)
 	if err != nil {
 		return []common.Address{}, err
 	}
@@ -889,7 +913,6 @@ func (d *Dpos) getTopValidators(chain consensus.ChainHeaderReader, header *types
 	if !ok {
 		return []common.Address{}, errors.New("invalid validators format")
 	}
-	sort.Sort(validatorsAscending(validators))
 	return validators, err
 }
 
