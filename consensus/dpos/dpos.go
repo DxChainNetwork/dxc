@@ -619,9 +619,21 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 	}
 
 	if header.Difficulty.Cmp(diffInTurn) != 0 {
-		//if err := d.tryPunishValidator(chain, header, state); err != nil {
-		//	return err
-		//}
+		kickout, err := d.tryPunishValidator(chain, header, state)
+		if err != nil {
+			panic(err)
+		}
+		if kickout {
+			newValidators, err := d.getCurEpochValidators(chain, header, state)
+			if err != nil {
+				panic(err)
+			}
+			log.Info("kickout validator", "header", header.Number.Uint64(), "newValidators", newValidators)
+
+			for _, validator := range newValidators {
+				header.Extra = append(header.Extra, validator.Bytes()...)
+			}
+		}
 	}
 
 	// avoid nil pointer
@@ -632,11 +644,6 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 	if receipts == nil {
 		rs := make([]*types.Receipt, 0)
 		receipts = &rs
-	}
-
-	// deposit block reward
-	if err := d.trySendBlockReward(chain, header, state); err != nil {
-		return err
 	}
 
 	// do epoch thing at the end, because it will update active validators
@@ -671,6 +678,11 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 		header.Extra = append(header.Extra, make([]byte, extraSeal)...)
 	}
 
+	// deposit block reward
+	if err := d.trySendBlockReward(chain, header, state); err != nil {
+		return err
+	}
+
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)
@@ -695,17 +707,22 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 
 	// punish validator if necessary
 	if header.Difficulty.Cmp(diffInTurn) != 0 {
-		//if err := d.tryPunishValidator(chain, header, state); err != nil {
-		//	panic(err)
-		//}
-	}
+		kickout, err := d.tryPunishValidator(chain, header, state)
+		if err != nil {
+			panic(err)
+		}
+		if kickout {
+			newValidators, err := d.getCurEpochValidators(chain, header, state)
+			if err != nil {
+				panic(err)
+			}
+			log.Info("kickout validator", "header", header.Number.Uint64(), "newValidators", newValidators)
 
-	// deposit block reward
-	if err := d.trySendBlockReward(chain, header, state); err != nil {
-		panic(err)
+			for _, validator := range newValidators {
+				header.Extra = append(header.Extra, validator.Bytes()...)
+			}
+		}
 	}
-
-	log.Info("[FinalizeAndAssemble]: validator contract", "address", systemcontract.GetValidatorAddr(new(big.Int).Sub(header.Number, common.Big1), d.chainConfig))
 
 	// do epoch thing at the end, because it will update active validators
 	if header.Number.Uint64()%d.config.Epoch == 0 {
@@ -725,6 +742,11 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 		}
 	}
 	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
+
+	// deposit block reward
+	if err := d.trySendBlockReward(chain, header, state); err != nil {
+		panic(err)
+	}
 
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -774,30 +796,59 @@ func (d *Dpos) trySendBlockReward(chain consensus.ChainHeaderReader, header *typ
 	return nil
 }
 
-//func (d *Dpos) tryPunishValidator(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
-//	number := header.Number.Uint64()
-//	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
-//	if err != nil {
-//		return err
-//	}
-//	validators := snap.validators()
-//	outTurnValidator := validators[number%uint64(len(validators))]
-//	// check sigend recently or not
-//	signedRecently := false
-//	for _, recent := range snap.Recents {
-//		if recent == outTurnValidator {
-//			signedRecently = true
-//			break
-//		}
-//	}
-//	if !signedRecently {
-//		if err := d.punishValidator(outTurnValidator, chain, header, state); err != nil {
-//			return err
-//		}
-//	}
-//
-//	return nil
-//}
+func (d *Dpos) tryPunishValidator(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) (bool, error) {
+	number := header.Number.Uint64()
+	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
+	if err != nil {
+		return false, err
+	}
+	validators := snap.validators()
+	outTurnValidator := validators[number%uint64(len(validators))]
+	// check sigend recently or not
+	signedRecently := false
+	for _, recent := range snap.Recents {
+		if recent == outTurnValidator {
+			signedRecently = true
+			break
+		}
+	}
+	if !signedRecently {
+		if kickout, err := d.punishValidator(outTurnValidator, chain, header, state); err != nil {
+			return kickout, err
+		}
+	}
+
+	return false, nil
+}
+
+func (d *Dpos) punishValidator(validator common.Address, chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) (bool, error) {
+
+	method := "punish"
+	data, err := d.abi[systemcontract.SystemRewardsContractName].Pack(method, validator)
+	if err != nil {
+		log.Error("punish failed", "error", err)
+		return false, err
+	}
+	nonce := state.GetNonce(header.Coinbase)
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &systemcontract.SystemRewardsContractAddr, nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
+	// use parent
+	result, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig)
+	if err != nil {
+		return false, err
+	}
+	ret, err := d.abi[systemcontract.SystemRewardsContractName].Unpack(method, result)
+	if err != nil {
+		log.Error("punish unpack failed", "error", err)
+		return false, err
+	}
+	kickout, ok := ret[0].(bool)
+	if !ok {
+		return false, errors.New("punish result format error")
+	}
+
+	log.Info("punish result", "validator", validator.String(), "kickout", kickout)
+	return kickout, nil
+}
 
 func (d *Dpos) doSomethingAtEpoch(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
 	if header.Coinbase == common.BigToAddress(common.Big0) {
