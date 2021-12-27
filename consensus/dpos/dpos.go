@@ -321,14 +321,15 @@ func (d *Dpos) verifyHeader(chain consensus.ChainHeaderReader, header *types.Hea
 	if len(header.Extra) < extraVanity+extraSeal {
 		return errMissingSignature
 	}
+
 	// check extra data
 	isEpoch := number%d.config.Epoch == 0
-
 	// Ensure that the extra-data contains a validator list on checkpoint, but none otherwise
 	validatorsBytes := len(header.Extra) - extraVanity - extraSeal
-	if !isEpoch && validatorsBytes != 0 {
-		return errExtraValidators
-	}
+	// TODO check
+	//if !isEpoch && validatorsBytes != 0 {
+	//	return errExtraValidators
+	//}
 	// Ensure that the validator bytes length is valid
 	if isEpoch && validatorsBytes%common.AddressLength != 0 {
 		return errExtraValidators
@@ -693,7 +694,6 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 			panic(err)
 		}
 	}
-
 	// punish validator if necessary
 	if header.Difficulty.Cmp(diffInTurn) != 0 {
 		kickout, err := d.tryPunishValidator(chain, header, state)
@@ -712,7 +712,7 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 			}
 		}
 	}
-
+	header.Extra = header.Extra[:extraVanity]
 	// do epoch thing at the end, because it will update active validators
 	if header.Number.Uint64()%d.config.Epoch == 0 {
 		log.Info("[FinalizeAndAssemble]: update epoch", "update", true)
@@ -725,7 +725,6 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 			panic(err)
 		}
 		log.Info("update epoch info", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
-		header.Extra = header.Extra[:extraVanity]
 		for _, validator := range newEpochValidators {
 			header.Extra = append(header.Extra, validator.Bytes()...)
 		}

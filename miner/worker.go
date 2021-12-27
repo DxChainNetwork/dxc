@@ -698,7 +698,7 @@ func (w *worker) makeCurrent(parent *types.Block, header *types.Header) error {
 	env.tcount = 0
 
 	// Swap out the old work with the new one, terminating any leftover prefetcher
-	// processes in the mean time and starting a new one.
+	// processes in the meantime and starting a new one.
 	if w.current != nil && w.current.state != nil {
 		w.current.state.StopPrefetcher()
 	}
