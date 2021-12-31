@@ -87,7 +87,7 @@ func main() {
 		panic(err)
 	}
 	allocData := makealloc(g)
-	outputFile, err := os.OpenFile("./build/bin/genesisAllocRlpData.txt", os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.ModePerm)
+	outputFile, err := os.OpenFile("./build/bin/genesisAllocRlpData", os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
