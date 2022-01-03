@@ -18,6 +18,7 @@
 package ethconfig
 
 import (
+	"github.com/DxChainNetwork/dxc/consensus/dpos"
 	"math/big"
 	"os"
 	"os/user"
@@ -28,7 +29,6 @@ import (
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/consensus"
 	"github.com/DxChainNetwork/dxc/consensus/clique"
-	"github.com/DxChainNetwork/dxc/consensus/congress"
 	"github.com/DxChainNetwork/dxc/consensus/ethash"
 	"github.com/DxChainNetwork/dxc/core"
 	"github.com/DxChainNetwork/dxc/eth/downloader"
@@ -89,7 +89,7 @@ var Defaults = Config{
 		DatasetsOnDisk:   2,
 		DatasetsLockMmap: false,
 	},
-	NetworkId:               128,
+	NetworkId:               36, // net_version
 	TxLookupLimit:           0,
 	LightPeers:              100,
 	UltraLightFraction:      75,
@@ -226,9 +226,8 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 	if chainConfig.Clique != nil {
 		return clique.New(chainConfig.Clique, db)
 	}
-	// If proof-of-stake-authority is requested, set it up
-	if chainConfig.Congress != nil {
-		return congress.New(chainConfig, db)
+	if chainConfig.Dpos != nil {
+		return dpos.New(chainConfig, db)
 	}
 	// Otherwise assume proof-of-work
 	switch config.PowMode {

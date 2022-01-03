@@ -1,4 +1,4 @@
-package congress
+package dpos
 
 import (
 	"github.com/DxChainNetwork/dxc/common"

@@ -25,7 +25,7 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-// Genesis hashes to enforce below configs on.
+// Genesis hashes to enforce below configs on. TODO: update hash
 var (
 	MainnetGenesisHash = common.HexToHash("0x5751d1772ebc82d52d19d96157bb3f13ca8417217e3c0913adf15f04eb4cb144")
 	TestnetGenesisHash = common.HexToHash("0xb24b1124276b1250ad3b2c02623677bce3e76c1539f76dcdfe4c27ab991c1dad")
@@ -42,7 +42,7 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{}
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(128),
+		ChainID:             big.NewInt(36),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        nil,
 		DAOForkSupport:      true,
@@ -54,14 +54,14 @@ var (
 		PetersburgBlock:     big.NewInt(0),
 		IstanbulBlock:       big.NewInt(0),
 		MuirGlacierBlock:    nil,
-		RedCoastBlock:       big.NewInt(6618800),
-		BerlinBlock:         big.NewInt(8577000),
-		LondonBlock:         big.NewInt(8577000),
-		SophonBlock:         big.NewInt(8577000),
+		RedCoastBlock:       big.NewInt(0),
+		BerlinBlock:         big.NewInt(0),
+		LondonBlock:         big.NewInt(0),
+		SophonBlock:         big.NewInt(0),
 
-		Congress: &CongressConfig{
+		Dpos: &DposConfig{
 			Period: 3,
-			Epoch:  200,
+			Epoch:  20,
 
 			EnableDevVerification: true,
 		},
@@ -69,7 +69,7 @@ var (
 
 	// TestnetChainConfig contains the chain parameters to run a node on the YOLOv1 test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(256),
+		ChainID:             big.NewInt(72),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        nil,
 		DAOForkSupport:      true,
@@ -81,13 +81,15 @@ var (
 		PetersburgBlock:     big.NewInt(0),
 		IstanbulBlock:       big.NewInt(0),
 		MuirGlacierBlock:    nil,
-		RedCoastBlock:       big.NewInt(6072600),
-		BerlinBlock:         big.NewInt(8290000),
-		LondonBlock:         big.NewInt(8290000),
-		SophonBlock:         big.NewInt(8290000),
-		Congress: &CongressConfig{
+		RedCoastBlock:       big.NewInt(0),
+		BerlinBlock:         big.NewInt(0),
+		LondonBlock:         big.NewInt(0),
+		SophonBlock:         big.NewInt(0),
+		Dpos: &DposConfig{
 			Period: 3,
-			Epoch:  200,
+			Epoch:  20,
+
+			EnableDevVerification: true,
 		},
 	}
 
@@ -139,7 +141,7 @@ type TrustedCheckpoint struct {
 	BloomRoot    common.Hash `json:"bloomRoot"`
 }
 
-// HashEqual returns an indicator comparing the itself hash with given one.
+// HashEqual returns an indicator comparing the hash with given one.
 func (c *TrustedCheckpoint) HashEqual(hash common.Hash) bool {
 	if c.Empty() {
 		return hash == common.Hash{}
@@ -178,7 +180,7 @@ type CheckpointOracleConfig struct {
 
 // ChainConfig is the core config which determines the blockchain settings.
 //
-// ChainConfig is stored in the database on a per block basis. This means
+// ChainConfig is stored in the database on a per-block basis. This means
 // that any network, identified by its genesis block, can have its own
 // set of configuration options.
 type ChainConfig struct {
@@ -210,9 +212,9 @@ type ChainConfig struct {
 	SophonBlock   *big.Int `json:"sophonBlock,omitempty"`
 
 	// Various consensus engines
-	Ethash   *EthashConfig   `json:"ethash,omitempty"`
-	Clique   *CliqueConfig   `json:"clique,omitempty"`
-	Congress *CongressConfig `json:"congress,omitempty"`
+	Ethash *EthashConfig `json:"ethash,omitempty"`
+	Clique *CliqueConfig `json:"clique,omitempty"`
+	Dpos   *DposConfig   `json:"dpos,omitempty"`
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -234,8 +236,8 @@ func (c *CliqueConfig) String() string {
 	return "clique"
 }
 
-// CongressConfig is the consensus engine configs for proof-of-stake-authority based sealing.
-type CongressConfig struct {
+// DposConfig is the consensus engine configs for proof-of-stake-authority based sealing.
+type DposConfig struct {
 	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
 	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
 
@@ -243,8 +245,8 @@ type CongressConfig struct {
 }
 
 // String implements the stringer interface, returning the consensus engine details.
-func (c *CongressConfig) String() string {
-	return "congress"
+func (d *DposConfig) String() string {
+	return "dpos"
 }
 
 // String implements the fmt.Stringer interface.
@@ -255,8 +257,8 @@ func (c *ChainConfig) String() string {
 		engine = c.Ethash
 	case c.Clique != nil:
 		engine = c.Clique
-	case c.Congress != nil:
-		engine = c.Congress
+	case c.Dpos != nil:
+		engine = c.Dpos
 	default:
 		engine = "unknown"
 	}
