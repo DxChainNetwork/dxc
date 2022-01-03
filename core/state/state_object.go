@@ -434,7 +434,7 @@ func (s *stateObject) AddBalance(amount *big.Int) {
 func (s *stateObject) SubBalance(amount *big.Int) {
 	// We must check emptiness for the objects such that the account
 	// clearing (0,0,0 objects) can take effect.
-	// It may happen because the Congress engine will interact with some system-contract by evm Call,
+	// It may happen because the Dpos engine will interact with some system-contract by evm Call,
 	// and the `from` account may be empty.
 	if amount.Sign() == 0 {
 		if s.empty() {

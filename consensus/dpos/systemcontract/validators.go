@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/DxChainNetwork/dxc/accounts/abi"
 	"github.com/DxChainNetwork/dxc/common"
-	"github.com/DxChainNetwork/dxc/consensus/congress/vmcaller"
+	"github.com/DxChainNetwork/dxc/consensus/dpos/vmcaller"
 	"github.com/DxChainNetwork/dxc/core"
 	"github.com/DxChainNetwork/dxc/core/state"
 	"github.com/DxChainNetwork/dxc/core/types"
