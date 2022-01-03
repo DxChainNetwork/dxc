@@ -7,7 +7,7 @@ import (
 
 // using for Validators contract's initialize
 var (
-	InitValAddress = common.HexToAddress("0x6b246a131e2c59108c841e9bc725acad3d3ee3f0")
+	InitValAddress = common.HexToAddress("0x1c0e8eaf42ec8d4010e960313248d2af95be7d34")
 	InitRate       = uint8(70)
-	InitDeposit    = new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
+	InitDeposit    = new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1000))
 )
