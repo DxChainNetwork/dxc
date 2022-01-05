@@ -47,3 +47,12 @@ profile.cov
 /dashboard/assets/package-lock.json
 
 **/yarn-error.log
+/consensus/dpos/systemcontract/contracts/node_modules/
+/consensus/dpos/systemcontract/contracts/envs/.env.dev
+/consensus/dpos/systemcontract/contracts/envs/.env.production
+/consensus/dpos/systemcontract/contracts/envs/.env.test
+/consensus/dpos/systemcontract/contracts/artifacts/
+/consensus/dpos/systemcontract/contracts/bin/
+/consensus/dpos/systemcontract/contracts/cache/
+/consensus/dpos/systemcontract/contracts/package-lock.json
+/consensus/dpos/systemcontract/contracts/flat/
