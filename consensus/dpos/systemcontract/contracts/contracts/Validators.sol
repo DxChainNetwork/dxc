@@ -258,7 +258,6 @@ contract Validators is Base, Initializable {
         require(val.status == ValidatorStatus.effictive, "Validators: validator status error");
 
         val.status = ValidatorStatus.kickout;
-        // 踢除本周期出块节点
         uint256 index = curEpochValidatorsIdMap[_val] - 1;
         for (uint256 i = index; i < curEpochValidators.length - 1 - index; i++) {
             address nextAddr = curEpochValidators[index + 1];
