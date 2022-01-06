@@ -232,7 +232,6 @@ type Dpos struct {
 func New(chainConfig *params.ChainConfig, db ethdb.Database) *Dpos {
 	// Set any missing consensus parameters to their defaults
 	conf := *chainConfig.Dpos
-	log.Info("epoch info", "epoch", conf.Epoch)
 	if conf.Epoch == 0 {
 		conf.Epoch = epochLength
 	}
@@ -567,8 +566,6 @@ func (d *Dpos) Prepare(chain consensus.ChainHeaderReader, header *types.Header) 
 		return err
 	}
 
-	log.Info("[Prepare]", "snap.validators", snap.validators(), "snap.number", snap.Number, "current header", number, "header.coinbase", header.Coinbase.String())
-
 	// Set the correct difficulty
 	header.Difficulty = calcDifficulty(snap, d.validator)
 
@@ -809,6 +806,7 @@ func (d *Dpos) tryPunishValidator(chain consensus.ChainHeaderReader, header *typ
 	return false, nil
 }
 
+// punishValidator punish validator when not mining in turn
 func (d *Dpos) punishValidator(validator common.Address, chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) (bool, error) {
 
 	method := "punish"
@@ -834,10 +832,10 @@ func (d *Dpos) punishValidator(validator common.Address, chain consensus.ChainHe
 		return false, errors.New("punish result format error")
 	}
 
-	log.Info("punish result", "validator", validator.String(), "kickout", kickout)
 	return kickout, nil
 }
 
+// doSomethingAtEpoch tryElect new epoch validators
 func (d *Dpos) doSomethingAtEpoch(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
 	if header.Coinbase == common.BigToAddress(common.Big0) {
 		return nil
@@ -1124,12 +1122,6 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 }
 
 func (d *Dpos) PreHandle(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
-	//if d.chainConfig.RedCoastBlock != nil && d.chainConfig.RedCoastBlock.Cmp(header.Number) == 0 {
-	//	return systemcontract.ApplySystemContractUpgrade(systemcontract.SysContractV1, state, header, newChainContext(chain, d), d.chainConfig)
-	//}
-	//if d.chainConfig.SophonBlock != nil && d.chainConfig.SophonBlock.Cmp(header.Number) == 0 {
-	//	return systemcontract.ApplySystemContractUpgrade(systemcontract.SysContractV2, state, header, newChainContext(chain, d), d.chainConfig)
-	//}
 	return nil
 }
 
