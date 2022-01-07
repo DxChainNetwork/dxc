@@ -21,8 +21,10 @@ import (
 
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/consensus"
+	"github.com/DxChainNetwork/dxc/consensus/dpos/systemcontract"
 	"github.com/DxChainNetwork/dxc/core/types"
 	"github.com/DxChainNetwork/dxc/rpc"
+	"math/big"
 )
 
 // API is a user facing RPC API to allow controlling the validator and voting
@@ -88,6 +90,76 @@ func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) 
 		return nil, err
 	}
 	return snap.validators(), nil
+}
+
+// GetCurrentEpochValidators return current epoch validators
+func (api *API) GetCurrentEpochValidators(number *rpc.BlockNumber) ([]common.Address, error) {
+	validators := systemcontract.NewValidators()
+	var header *types.Header
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	if header == nil {
+		return []common.Address{}, errUnknownBlock
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return []common.Address{}, err
+	}
+	curValidators, err := validators.GetCurrentEpochValidators(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	if err != nil {
+		return []common.Address{}, err
+	}
+	return curValidators, nil
+}
+
+// GetEffictiveValidators return all effictive validators
+func (api *API) GetEffictiveValidators(number *rpc.BlockNumber) ([]common.Address, error) {
+	validators := systemcontract.NewValidators()
+	var header *types.Header
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	if header == nil {
+		return []common.Address{}, errUnknownBlock
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return []common.Address{}, err
+	}
+	curValidators, err := validators.GetEffictiveValidators(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	if err != nil {
+		return []common.Address{}, err
+	}
+	return curValidators, nil
+}
+
+// GetMinDeposit return the minimum stake amount
+func (api *API) GetMinDeposit(number *rpc.BlockNumber) (*big.Int, error) {
+	base := systemcontract.NewBase()
+	var header *types.Header
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	if header == nil {
+		return big.NewInt(0), errUnknownBlock
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	minDeposit, err := base.GetMinDeposit(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	return minDeposit, nil
+
 }
 
 type status struct {

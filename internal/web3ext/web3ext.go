@@ -116,6 +116,24 @@ web3._extend({
 			call: 'dpos_getValidatorsAtHash',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'getCurrentEpochValidators',
+			call: 'dpos_getCurrentEpochValidators',
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getEffictiveValidators',
+			call: 'dpos_getEffictiveValidators',
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+			params: 1
+		}),
+	],
+	properties: [
+		new web3._extend.Property({
+			name: 'minDeposit',
+			getter: 'dpos_getMinDeposit',
+		}),
 	]
 });
 `
