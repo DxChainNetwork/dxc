@@ -36,7 +36,7 @@ func NewSystemRewards() *SystemRewards {
 // GetEpochInfo return epoch info
 func (s *SystemRewards) GetEpochInfo(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, epoch *big.Int) (*EpochInfo, error) {
 	method := "epochs"
-	log.Info("GetEpochInfo", "epoch", epoch)
+
 	data, err := s.abi.Pack(method, epoch)
 	if err != nil {
 		log.Error("can't pack SystemRewards contract method", "method", method)
@@ -54,8 +54,6 @@ func (s *SystemRewards) GetEpochInfo(statedb *state.StateDB, header *types.Heade
 		log.Error("SystemRewards contract Unpack error", "method", method, "error", err, "result", result)
 		return &EpochInfo{}, err
 	}
-
-	log.Info("SystemRewards contract execute result", "method", method, "blockReward", epochInfo.BlockReward)
 
 	return epochInfo, nil
 }
