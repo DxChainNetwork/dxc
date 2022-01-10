@@ -32,7 +32,7 @@ The DxChain mainnet currently implements the DPoS (Delegated Proof of Stake) alg
 
 * TPS: 500+
 * Average block interval: 3s
-* Validator: <=99
+* Validators: <=99
 * Delegators: <=210
 
 The system contracts code here: `consensus/dpos/systemcontract/contracts`
