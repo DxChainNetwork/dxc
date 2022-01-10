@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/DxChainNetwork/dxc/accounts/abi"
 	"github.com/DxChainNetwork/dxc/common"
-	"github.com/DxChainNetwork/dxc/common/hexutil"
 	"github.com/DxChainNetwork/dxc/consensus/dpos/vmcaller"
 	"github.com/DxChainNetwork/dxc/core"
 	"github.com/DxChainNetwork/dxc/core/state"
@@ -22,6 +21,19 @@ type Proposals struct {
 
 type ProposalInfo struct {
 	Id          [4]byte
+	Proposer    common.Address
+	PType       uint8
+	Deposit     *big.Int
+	Rate        uint8
+	Details     string
+	InitBlock   *big.Int
+	Guarantee   common.Address
+	UpdateBlock *big.Int
+	Status      uint8
+}
+
+type ProposalInfoDetail struct {
+	Id          string
 	Proposer    common.Address
 	PType       uint8
 	Deposit     *big.Int
@@ -60,100 +72,91 @@ func (p *Proposals) InitProposal(statedb *state.StateDB, header *types.Header, c
 	return nil
 }
 
-func (p *Proposals) AddressProposalSets(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, page int64, size int64) ([]string, error) {
+// AddressProposalSets function AddressProposalSets
+func (p *Proposals) AddressProposalSets(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, page int64, size int64) ([][4]byte, error) {
 	method := "addressProposalSets"
 	data, err := p.abi.Pack(method, addr, big.NewInt(page), big.NewInt(size))
 
 	if err != nil {
 		log.Error("can't pack Proposals contract method", "method", method)
-		return []string{}, err
+		return [][4]byte{}, err
 	}
 
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &p.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
 	if err != nil {
 		log.Error("AddressProposalSets result", "error", err)
-		return []string{}, err
+		return [][4]byte{}, err
 	}
 
 	ret, err := p.abi.Unpack(method, result)
-
 	if err != nil {
-		return []string{}, err
+		return [][4]byte{}, err
 	}
-	if proposalsIds, ok := ret[0].([][4]byte); !ok {
-		return []string{}, errors.New("invalid AddressProposalSets result format")
+	if proposalIds, ok := ret[0].([][4]byte); !ok {
+		return [][4]byte{}, errors.New("invalid AddressProposalSets result format")
 	} else {
-		log.Info("AddressProposalSets result", "address", addr.String(), "result", proposalsIds)
-		var newProposalsIds []string
-		for i := 0; i < len(proposalsIds); i++ {
-			id := hexutil.Encode(proposalsIds[i][0:len(proposalsIds[i])])
-			newProposalsIds = append(newProposalsIds, id)
-		}
-		return newProposalsIds, nil
+		log.Info("AddressProposalSets result", "address", addr.String(), "result", proposalIds)
+		return proposalIds, nil
 	}
 
 }
 
-func (p *Proposals) AllProposalSets(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, page int64, size int64) ([]string, error) {
+// AllProposalSets function AllProposalSets
+func (p *Proposals) AllProposalSets(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, page int64, size int64) ([][4]byte, error) {
 	method := "allProposalSets"
 	data, err := p.abi.Pack(method, big.NewInt(page), big.NewInt(size))
 
 	if err != nil {
 		log.Error("can't pack Proposals contract method", "method", method)
-		return []string{}, err
+		return [][4]byte{}, err
 	}
 
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &p.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
 	if err != nil {
 		log.Error("AllProposalSets result", "error", err)
-		return []string{}, err
+		return [][4]byte{}, err
 	}
 
 	ret, err := p.abi.Unpack(method, result)
 	log.Info("allProposals result", "ret", ret)
 	if err != nil {
-		return []string{}, err
+		return [][4]byte{}, err
 	}
-	if proposalsIds, ok := ret[0].([][4]byte); !ok {
-		return []string{}, errors.New("invalid AddressProposalSets result format")
+	if proposalIds, ok := ret[0].([][4]byte); !ok {
+		return [][4]byte{}, errors.New("invalid AddressProposalSets result format")
 	} else {
-		//lenth := len(proposalsIds)
-		var newProposalsIds []string
-		for i := 0; i < len(proposalsIds); i++ {
-			id := hexutil.Encode(proposalsIds[i][0:len(proposalsIds[i])])
-			newProposalsIds = append(newProposalsIds, id)
-		}
-		log.Info("AllProposalSets result", "result", newProposalsIds)
-		return newProposalsIds, nil
+		log.Info("AllProposalSets result", "result", proposalIds)
+		return proposalIds, nil
 	}
-
 }
 
-func (p *Proposals) AddressProposals(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, page int64, size int64) (*ProposalInfo, error) {
+// AddressProposals function AddressProposals
+func (p *Proposals) AddressProposals(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, page int64, size int64) ([]ProposalInfo, error) {
 	method := "addressProposals"
 	data, err := p.abi.Pack(method, addr, big.NewInt(page), big.NewInt(size))
 
 	if err != nil {
 		log.Error("can't pack Proposals contract method", "method", method)
-		return &ProposalInfo{}, err
+		return []ProposalInfo{}, err
 	}
 
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &p.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
 	if err != nil {
 		log.Error("AddressProposals result", "error", err)
-		return &ProposalInfo{}, err
+		return []ProposalInfo{}, err
 	}
-	proposalInfo := &ProposalInfo{}
-	err = p.abi.UnpackIntoInterface(proposalInfo, method, result)
+	var proposalInfo []ProposalInfo
+	err = p.abi.UnpackIntoInterface(&proposalInfo, method, result)
 	if err != nil {
-		return &ProposalInfo{}, err
+		return []ProposalInfo{}, err
 	}
 	return proposalInfo, nil
 }
 
+// AllProposals function AllProposals
 func (p *Proposals) AllProposals(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, page int64, size int64) ([]ProposalInfo, error) {
 	method := "allProposals"
 	data, err := p.abi.Pack(method, big.NewInt(page), big.NewInt(size))
@@ -166,21 +169,72 @@ func (p *Proposals) AllProposals(statedb *state.StateDB, header *types.Header, c
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &p.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
 	if err != nil {
-		log.Error("allProposals result", "error", err)
+		log.Error("AddressProposals result", "error", err)
 		return []ProposalInfo{}, err
 	}
-	ret, err := p.abi.Unpack(method, result)
+	var proposalInfo []ProposalInfo
+	err = p.abi.UnpackIntoInterface(&proposalInfo, method, result)
 	if err != nil {
-		log.Error("allProposals result", "error", err)
 		return []ProposalInfo{}, err
 	}
-	log.Info("allProposals result", "ret", ret[0])
-	if proposalsInfos, ok := ret[0].([]ProposalInfo); !ok {
-		return []ProposalInfo{}, errors.New("invalid AllProposals result format")
-	} else {
-		//lenth := len(proposalsIds)
-		log.Info("allProposals result", "result", proposalsInfos)
-		return proposalsInfos, nil
+	return proposalInfo, nil
+}
+
+// AddressProposalCount function AddressProposalCount
+func (p *Proposals) AddressProposalCount(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address) (*big.Int, error) {
+	method := "addressProposalCount"
+	data, err := p.abi.Pack(method, addr)
+
+	if err != nil {
+		log.Error("can't pack Proposals contract method", "method", method)
+		return big.NewInt(0), err
 	}
 
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &p.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("AddressProposalCount result", "error", err)
+		return big.NewInt(0), err
+	}
+
+	ret, err := p.abi.Unpack(method, result)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	if count, ok := ret[0].(*big.Int); !ok {
+		return big.NewInt(0), errors.New("invalid AddressProposalCount result format")
+	} else {
+		log.Info("AddressProposalCount result", "address", addr.String(), "result", count)
+		return count, nil
+	}
+}
+
+// ProposalCount function ProposalCount
+func (p *Proposals) ProposalCount(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) (*big.Int, error) {
+	method := "proposalCount"
+	data, err := p.abi.Pack(method)
+
+	if err != nil {
+		log.Error("can't pack Proposals contract method", "method", method)
+		return big.NewInt(0), err
+	}
+
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &p.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("AllProposalSets result", "error", err)
+		return big.NewInt(0), err
+	}
+
+	ret, err := p.abi.Unpack(method, result)
+	log.Info("allProposals result", "ret", ret)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	if count, ok := ret[0].(*big.Int); !ok {
+		return big.NewInt(0), errors.New("invalid AddressProposalSets result format")
+	} else {
+		log.Info("AllProposalSets result", "result", count)
+		return count, nil
+	}
 }

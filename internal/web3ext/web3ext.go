@@ -152,6 +152,16 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null],
 			params: 3
 		}),
+		new web3._extend.Method({
+			name: 'proposalCount',
+			call: 'dpos_getProposalCount'
+		}),
+		new web3._extend.Method({
+			name: 'addressProposalCount',
+			call: 'dpos_getAddressProposalCount',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter],
+			params: 1
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

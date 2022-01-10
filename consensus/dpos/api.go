@@ -18,6 +18,7 @@ package dpos
 
 import (
 	"fmt"
+	"github.com/DxChainNetwork/dxc/common/hexutil"
 
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/consensus"
@@ -162,7 +163,7 @@ func (api *API) GetMinDeposit(number *rpc.BlockNumber) (*big.Int, error) {
 
 }
 
-// GetAddressProposalSets
+// GetAddressProposalSets return the address proposal id
 func (api *API) GetAddressProposalSets(addr common.Address, page int64, size int64) ([]string, error) {
 	proposals := systemcontract.NewProposals()
 	var header *types.Header
@@ -178,10 +179,15 @@ func (api *API) GetAddressProposalSets(addr common.Address, page int64, size int
 	if err != nil {
 		return []string{}, err
 	}
-	return proposalIds, nil
+	var newProposalIds []string
+	for i := 0; i < len(proposalIds); i++ {
+		id := hexutil.Encode(proposalIds[i][0:len(proposalIds[i])])
+		newProposalIds = append(newProposalIds, id)
+	}
+	return newProposalIds, nil
 }
 
-// GetAllProposalSets
+// GetAllProposalSets return all proposals id
 func (api *API) GetAllProposalSets(page int64, size int64) ([]string, error) {
 	proposals := systemcontract.NewProposals()
 	var header *types.Header
@@ -197,43 +203,120 @@ func (api *API) GetAllProposalSets(page int64, size int64) ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
-	return proposalIds, nil
+	var newProposalIds []string
+	for i := 0; i < len(proposalIds); i++ {
+		id := hexutil.Encode(proposalIds[i][0:len(proposalIds[i])])
+		newProposalIds = append(newProposalIds, id)
+	}
+	return newProposalIds, nil
 }
 
-func (api *API) GetAllProposals(page int64, size int64) ([]systemcontract.ProposalInfo, error) {
+// GetAllProposals return all proposals
+func (api *API) GetAllProposals(page int64, size int64) ([]systemcontract.ProposalInfoDetail, error) {
 	proposals := systemcontract.NewProposals()
 	var header *types.Header
 	header = api.chain.CurrentHeader()
 	if header == nil {
-		return []systemcontract.ProposalInfo{}, errUnknownBlock
+		return []systemcontract.ProposalInfoDetail{}, errUnknownBlock
 	}
 	state, err := api.dpos.stateFn(header.Root)
 	if err != nil {
-		return []systemcontract.ProposalInfo{}, err
+		return []systemcontract.ProposalInfoDetail{}, err
 	}
 	proposalInfos, err := proposals.AllProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
 	if err != nil {
-		return []systemcontract.ProposalInfo{}, err
+		return []systemcontract.ProposalInfoDetail{}, err
 	}
-	return proposalInfos, nil
+	var newProposals []systemcontract.ProposalInfoDetail
+	for i := 0; i < len(proposalInfos); i++ {
+		detail := systemcontract.ProposalInfoDetail{
+			Id:          hexutil.Encode(proposalInfos[i].Id[0:len(proposalInfos[i].Id)]),
+			Proposer:    proposalInfos[i].Proposer,
+			UpdateBlock: proposalInfos[i].UpdateBlock,
+			PType:       proposalInfos[i].PType,
+			Guarantee:   proposalInfos[i].Guarantee,
+			Deposit:     proposalInfos[i].Deposit,
+			Details:     proposalInfos[i].Details,
+			InitBlock:   proposalInfos[i].InitBlock,
+			Rate:        proposalInfos[i].Rate,
+			Status:      proposalInfos[i].Status,
+		}
+		newProposals = append(newProposals, detail)
+	}
+	return newProposals, nil
 }
 
-func (api *API) GetAddressProposals(addr common.Address, page int64, size int64) (*systemcontract.ProposalInfo, error) {
+// GetAddressProposals return the address proposals
+func (api *API) GetAddressProposals(addr common.Address, page int64, size int64) ([]systemcontract.ProposalInfoDetail, error) {
 	proposals := systemcontract.NewProposals()
 	var header *types.Header
 	header = api.chain.CurrentHeader()
 	if header == nil {
-		return &systemcontract.ProposalInfo{}, errUnknownBlock
+		return []systemcontract.ProposalInfoDetail{}, errUnknownBlock
 	}
 	state, err := api.dpos.stateFn(header.Root)
 	if err != nil {
-		return &systemcontract.ProposalInfo{}, err
+		return []systemcontract.ProposalInfoDetail{}, err
 	}
 	proposalInfos, err := proposals.AddressProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
 	if err != nil {
-		return &systemcontract.ProposalInfo{}, err
+		return []systemcontract.ProposalInfoDetail{}, err
 	}
-	return proposalInfos, nil
+	var newProposals []systemcontract.ProposalInfoDetail
+	for i := 0; i < len(proposalInfos); i++ {
+		detail := systemcontract.ProposalInfoDetail{
+			Id:          hexutil.Encode(proposalInfos[i].Id[0:len(proposalInfos[i].Id)]),
+			Proposer:    proposalInfos[i].Proposer,
+			UpdateBlock: proposalInfos[i].UpdateBlock,
+			PType:       proposalInfos[i].PType,
+			Guarantee:   proposalInfos[i].Guarantee,
+			Deposit:     proposalInfos[i].Deposit,
+			Details:     proposalInfos[i].Details,
+			InitBlock:   proposalInfos[i].InitBlock,
+			Rate:        proposalInfos[i].Rate,
+			Status:      proposalInfos[i].Status,
+		}
+		newProposals = append(newProposals, detail)
+	}
+	return newProposals, nil
+}
+
+// GetProposalCount return all proposal count
+func (api *API) GetProposalCount() (*big.Int, error) {
+	proposals := systemcontract.NewProposals()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if header == nil {
+		return big.NewInt(0), errUnknownBlock
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	count, err := proposals.ProposalCount(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	return count, nil
+}
+
+// GetAddressProposalCount return the address proposal count
+func (api *API) GetAddressProposalCount(addr common.Address) (*big.Int, error) {
+	proposals := systemcontract.NewProposals()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if header == nil {
+		return big.NewInt(0), errUnknownBlock
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	count, err := proposals.AddressProposalCount(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	return count, nil
 }
 
 type status struct {
