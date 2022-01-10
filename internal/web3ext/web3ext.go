@@ -128,6 +128,30 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'allProposalSets',
+			call: 'dpos_getAllProposalSets',
+			inputFormatter: [null,null],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'addressProposalSets',
+			call: 'dpos_getAddressProposalSets',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null],
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'allProposals',
+			call: 'dpos_getAllProposals',
+			inputFormatter: [null,null],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'addressProposals',
+			call: 'dpos_getAddressProposals',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null],
+			params: 3
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

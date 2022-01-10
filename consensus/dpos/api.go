@@ -162,6 +162,80 @@ func (api *API) GetMinDeposit(number *rpc.BlockNumber) (*big.Int, error) {
 
 }
 
+// GetAddressProposalSets
+func (api *API) GetAddressProposalSets(addr common.Address, page int64, size int64) ([]string, error) {
+	proposals := systemcontract.NewProposals()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if header == nil {
+		return []string{}, errUnknownBlock
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return []string{}, err
+	}
+	proposalIds, err := proposals.AddressProposalSets(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
+	if err != nil {
+		return []string{}, err
+	}
+	return proposalIds, nil
+}
+
+// GetAllProposalSets
+func (api *API) GetAllProposalSets(page int64, size int64) ([]string, error) {
+	proposals := systemcontract.NewProposals()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if header == nil {
+		return []string{}, errUnknownBlock
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return []string{}, err
+	}
+	proposalIds, err := proposals.AllProposalSets(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
+	if err != nil {
+		return []string{}, err
+	}
+	return proposalIds, nil
+}
+
+func (api *API) GetAllProposals(page int64, size int64) ([]systemcontract.ProposalInfo, error) {
+	proposals := systemcontract.NewProposals()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if header == nil {
+		return []systemcontract.ProposalInfo{}, errUnknownBlock
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return []systemcontract.ProposalInfo{}, err
+	}
+	proposalInfos, err := proposals.AllProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
+	if err != nil {
+		return []systemcontract.ProposalInfo{}, err
+	}
+	return proposalInfos, nil
+}
+
+func (api *API) GetAddressProposals(addr common.Address, page int64, size int64) (*systemcontract.ProposalInfo, error) {
+	proposals := systemcontract.NewProposals()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if header == nil {
+		return &systemcontract.ProposalInfo{}, errUnknownBlock
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return &systemcontract.ProposalInfo{}, err
+	}
+	proposalInfos, err := proposals.AddressProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
+	if err != nil {
+		return &systemcontract.ProposalInfo{}, err
+	}
+	return proposalInfos, nil
+}
+
 type status struct {
 	InturnPercent float64                `json:"inturnPercent"`
 	SigningStatus map[common.Address]int `json:"sealerActivity"`
