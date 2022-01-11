@@ -138,6 +138,7 @@ func (p *Proposals) AddressProposals(statedb *state.StateDB, header *types.Heade
 	var proposalInfo []ProposalInfo
 	err = p.abi.UnpackIntoInterface(&proposalInfo, method, result)
 	if err != nil {
+		log.Error("AddressProposals Unpack", "error", err)
 		return []ProposalInfo{}, err
 	}
 	return proposalInfo, nil
@@ -156,12 +157,13 @@ func (p *Proposals) AllProposals(statedb *state.StateDB, header *types.Header, c
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &p.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
 	if err != nil {
-		log.Error("AddressProposals result", "error", err)
+		log.Error("AllProposals result", "error", err)
 		return []ProposalInfo{}, err
 	}
 	var proposalInfo []ProposalInfo
 	err = p.abi.UnpackIntoInterface(&proposalInfo, method, result)
 	if err != nil {
+		log.Error("AllProposals Unpack", "error", err)
 		return []ProposalInfo{}, err
 	}
 	return proposalInfo, nil

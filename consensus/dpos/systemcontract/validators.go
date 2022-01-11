@@ -30,6 +30,7 @@ func (v *Validators) GetCurrentEpochValidators(statedb *state.StateDB, header *t
 	data, err := v.abi.Pack(method)
 	if err != nil {
 		log.Error("Validators Pack error", "method", method, "error", err)
+		return []common.Address{}, err
 	}
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
@@ -58,6 +59,7 @@ func (v *Validators) GetEffictiveValidators(statedb *state.StateDB, header *type
 	data, err := v.abi.Pack(method)
 	if err != nil {
 		log.Error("Validators Pack error", "method", method, "error", err)
+		return []common.Address{}, err
 	}
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
@@ -86,6 +88,7 @@ func (v *Validators) GetVoters(statedb *state.StateDB, header *types.Header, cha
 	data, err := v.abi.Pack(method, addr, page, size)
 	if err != nil {
 		log.Error("Validators Pack error", "method", method, "error", err)
+		return []common.Address{}, err
 	}
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
@@ -114,6 +117,7 @@ func (v *Validators) GetInvalidValidators(statedb *state.StateDB, header *types.
 	data, err := v.abi.Pack(method)
 	if err != nil {
 		log.Error("Validators Pack error", "method", method, "error", err)
+		return []common.Address{}, err
 	}
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
@@ -142,6 +146,7 @@ func (v *Validators) GetCancelQueueValidators(statedb *state.StateDB, header *ty
 	data, err := v.abi.Pack(method)
 	if err != nil {
 		log.Error("Validators Pack error", "method", method, "error", err)
+		return []common.Address{}, err
 	}
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
