@@ -177,12 +177,14 @@ func (api *API) GetMinDeposit(number *rpc.BlockNumber) (*big.Int, error) {
 }
 
 // GetAddressProposalSets return the address proposal id
-func (api *API) GetAddressProposalSets(addr common.Address, page *big.Int, size *big.Int) ([]string, error) {
+func (api *API) GetAddressProposalSets(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]string, error) {
 	proposals := systemcontract.NewProposals()
 	var header *types.Header
 	header = api.chain.CurrentHeader()
-	if header == nil {
-		return []string{}, errUnknownBlock
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	}
 	state, err := api.dpos.stateFn(header.Root)
 	if err != nil {
@@ -201,12 +203,14 @@ func (api *API) GetAddressProposalSets(addr common.Address, page *big.Int, size 
 }
 
 // GetAllProposalSets return all proposals id
-func (api *API) GetAllProposalSets(page *big.Int, size *big.Int) ([]string, error) {
+func (api *API) GetAllProposalSets(page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]string, error) {
 	proposals := systemcontract.NewProposals()
 	var header *types.Header
 	header = api.chain.CurrentHeader()
-	if header == nil {
-		return []string{}, errUnknownBlock
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	}
 	state, err := api.dpos.stateFn(header.Root)
 	if err != nil {
@@ -225,12 +229,14 @@ func (api *API) GetAllProposalSets(page *big.Int, size *big.Int) ([]string, erro
 }
 
 // GetAllProposals return all proposals
-func (api *API) GetAllProposals(page *big.Int, size *big.Int) ([]ProposalInfo, error) {
+func (api *API) GetAllProposals(page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]ProposalInfo, error) {
 	proposals := systemcontract.NewProposals()
 	var header *types.Header
 	header = api.chain.CurrentHeader()
-	if header == nil {
-		return []ProposalInfo{}, errUnknownBlock
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	}
 	state, err := api.dpos.stateFn(header.Root)
 	if err != nil {
@@ -260,12 +266,14 @@ func (api *API) GetAllProposals(page *big.Int, size *big.Int) ([]ProposalInfo, e
 }
 
 // GetAddressProposals return the address proposals
-func (api *API) GetAddressProposals(addr common.Address, page *big.Int, size *big.Int) ([]ProposalInfo, error) {
+func (api *API) GetAddressProposals(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]ProposalInfo, error) {
 	proposals := systemcontract.NewProposals()
 	var header *types.Header
 	header = api.chain.CurrentHeader()
-	if header == nil {
-		return []ProposalInfo{}, errUnknownBlock
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	}
 	state, err := api.dpos.stateFn(header.Root)
 	if err != nil {
@@ -295,12 +303,14 @@ func (api *API) GetAddressProposals(addr common.Address, page *big.Int, size *bi
 }
 
 // GetProposalCount return all proposal count
-func (api *API) GetProposalCount() (*big.Int, error) {
+func (api *API) GetProposalCount(number *rpc.BlockNumber) (*big.Int, error) {
 	proposals := systemcontract.NewProposals()
 	var header *types.Header
 	header = api.chain.CurrentHeader()
-	if header == nil {
-		return big.NewInt(0), errUnknownBlock
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	}
 	state, err := api.dpos.stateFn(header.Root)
 	if err != nil {
@@ -314,12 +324,14 @@ func (api *API) GetProposalCount() (*big.Int, error) {
 }
 
 // GetAddressProposalCount return the address proposal count
-func (api *API) GetAddressProposalCount(addr common.Address) (*big.Int, error) {
+func (api *API) GetAddressProposalCount(addr common.Address, number *rpc.BlockNumber) (*big.Int, error) {
 	proposals := systemcontract.NewProposals()
 	var header *types.Header
 	header = api.chain.CurrentHeader()
-	if header == nil {
-		return big.NewInt(0), errUnknownBlock
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	}
 	state, err := api.dpos.stateFn(header.Root)
 	if err != nil {
