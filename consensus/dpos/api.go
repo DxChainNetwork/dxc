@@ -543,7 +543,7 @@ func (api *API) GetPendingVoteReward(val common.Address, voter common.Address, n
 	return value, nil
 }
 
-// GetPendingRedeem return the voter redeem validators
+// GetPendingRedeem return the voter redeem validators voters
 func (api *API) GetPendingRedeem(addr common.Address, number *rpc.BlockNumber) (*big.Int, error) {
 	nodeVotes := systemcontract.NewNodeVotes()
 	var header *types.Header

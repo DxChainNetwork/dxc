@@ -70,9 +70,9 @@ func (n *NodeVotes) PendingVoteReward(statedb *state.StateDB, header *types.Head
 }
 
 // PendingRedeem function PendingRedeem
-func (n *NodeVotes) PendingRedeem(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, voter common.Address) (*big.Int, error) {
+func (n *NodeVotes) PendingRedeem(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address) (*big.Int, error) {
 	method := "pendingRedeem"
-	data, err := n.abi.Pack(method, voter)
+	data, err := n.abi.Pack(method, addr)
 
 	if err != nil {
 		log.Error("NodeVotes Pack error", "method", method, "error", err)
