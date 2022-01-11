@@ -18,6 +18,7 @@ package dpos
 
 import (
 	"fmt"
+	"github.com/DxChainNetwork/dxc/common/hexutil"
 
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/consensus"
@@ -32,6 +33,19 @@ import (
 type API struct {
 	chain consensus.ChainHeaderReader
 	dpos  *Dpos
+}
+
+type ProposalInfo struct {
+	Id          string
+	Proposer    common.Address
+	PType       uint8
+	Deposit     *big.Int
+	Rate        uint8
+	Details     string
+	InitBlock   *big.Int
+	Guarantee   common.Address
+	UpdateBlock *big.Int
+	Status      uint8
 }
 
 // GetSnapshot retrieves the state snapshot at a given block.
@@ -160,6 +174,174 @@ func (api *API) GetMinDeposit(number *rpc.BlockNumber) (*big.Int, error) {
 	}
 	return minDeposit, nil
 
+}
+
+// GetAddressProposalSets return the address proposal id
+func (api *API) GetAddressProposalSets(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]string, error) {
+	proposals := systemcontract.NewProposals()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return []string{}, err
+	}
+	proposalIds, err := proposals.AddressProposalSets(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
+	if err != nil {
+		return []string{}, err
+	}
+	var newProposalIds []string
+	for i := 0; i < len(proposalIds); i++ {
+		id := hexutil.Encode(proposalIds[i][0:len(proposalIds[i])])
+		newProposalIds = append(newProposalIds, id)
+	}
+	return newProposalIds, nil
+}
+
+// GetAllProposalSets return all proposals id
+func (api *API) GetAllProposalSets(page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]string, error) {
+	proposals := systemcontract.NewProposals()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return []string{}, err
+	}
+	proposalIds, err := proposals.AllProposalSets(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
+	if err != nil {
+		return []string{}, err
+	}
+	var newProposalIds []string
+	for i := 0; i < len(proposalIds); i++ {
+		id := hexutil.Encode(proposalIds[i][0:len(proposalIds[i])])
+		newProposalIds = append(newProposalIds, id)
+	}
+	return newProposalIds, nil
+}
+
+// GetAllProposals return all proposals
+func (api *API) GetAllProposals(page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]ProposalInfo, error) {
+	proposals := systemcontract.NewProposals()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return []ProposalInfo{}, err
+	}
+	proposalInfos, err := proposals.AllProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
+	if err != nil {
+		return []ProposalInfo{}, err
+	}
+	var newProposals []ProposalInfo
+	for i := 0; i < len(proposalInfos); i++ {
+		detail := ProposalInfo{
+			Id:          hexutil.Encode(proposalInfos[i].Id[0:len(proposalInfos[i].Id)]),
+			Proposer:    proposalInfos[i].Proposer,
+			UpdateBlock: proposalInfos[i].UpdateBlock,
+			PType:       proposalInfos[i].PType,
+			Guarantee:   proposalInfos[i].Guarantee,
+			Deposit:     proposalInfos[i].Deposit,
+			Details:     proposalInfos[i].Details,
+			InitBlock:   proposalInfos[i].InitBlock,
+			Rate:        proposalInfos[i].Rate,
+			Status:      proposalInfos[i].Status,
+		}
+		newProposals = append(newProposals, detail)
+	}
+	return newProposals, nil
+}
+
+// GetAddressProposals return the address proposals
+func (api *API) GetAddressProposals(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]ProposalInfo, error) {
+	proposals := systemcontract.NewProposals()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return []ProposalInfo{}, err
+	}
+	proposalInfos, err := proposals.AddressProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
+	if err != nil {
+		return []ProposalInfo{}, err
+	}
+	var newProposals []ProposalInfo
+	for i := 0; i < len(proposalInfos); i++ {
+		detail := ProposalInfo{
+			Id:          hexutil.Encode(proposalInfos[i].Id[0:len(proposalInfos[i].Id)]),
+			Proposer:    proposalInfos[i].Proposer,
+			UpdateBlock: proposalInfos[i].UpdateBlock,
+			PType:       proposalInfos[i].PType,
+			Guarantee:   proposalInfos[i].Guarantee,
+			Deposit:     proposalInfos[i].Deposit,
+			Details:     proposalInfos[i].Details,
+			InitBlock:   proposalInfos[i].InitBlock,
+			Rate:        proposalInfos[i].Rate,
+			Status:      proposalInfos[i].Status,
+		}
+		newProposals = append(newProposals, detail)
+	}
+	return newProposals, nil
+}
+
+// GetProposalCount return all proposal count
+func (api *API) GetProposalCount(number *rpc.BlockNumber) (*big.Int, error) {
+	proposals := systemcontract.NewProposals()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	count, err := proposals.ProposalCount(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	return count, nil
+}
+
+// GetAddressProposalCount return the address proposal count
+func (api *API) GetAddressProposalCount(addr common.Address, number *rpc.BlockNumber) (*big.Int, error) {
+	proposals := systemcontract.NewProposals()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	count, err := proposals.AddressProposalCount(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	return count, nil
 }
 
 type status struct {
