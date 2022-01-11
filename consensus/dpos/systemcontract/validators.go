@@ -79,3 +79,242 @@ func (v *Validators) GetEffictiveValidators(statedb *state.StateDB, header *type
 
 	return vals, nil
 }
+
+// GetVoters get the address voters
+func (v *Validators) GetVoters(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, page *big.Int, size *big.Int) ([]common.Address, error) {
+	method := "getVoters"
+	data, err := v.abi.Pack(method, addr, page, size)
+	if err != nil {
+		log.Error("Validators Pack error", "method", method, "error", err)
+	}
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("Validators contract execute error", "method", method, "error", err)
+		return []common.Address{}, err
+	}
+
+	ret, err := v.abi.Unpack(method, result)
+	if err != nil {
+		log.Error("Validators contract Unpack error", "method", method, "error", err, "result", result)
+		return []common.Address{}, err
+	}
+	voters, ok := ret[0].([]common.Address)
+	if !ok {
+		log.Error("Validators contract format result error", "method", method, "error", err)
+		return []common.Address{}, err
+	}
+
+	return voters, nil
+}
+
+// GetInvalidValidators get invalid validators
+func (v *Validators) GetInvalidValidators(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) ([]common.Address, error) {
+	method := "getInvalidValidators"
+	data, err := v.abi.Pack(method)
+	if err != nil {
+		log.Error("Validators Pack error", "method", method, "error", err)
+	}
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("Validators contract execute error", "method", method, "error", err)
+		return []common.Address{}, err
+	}
+
+	ret, err := v.abi.Unpack(method, result)
+	if err != nil {
+		log.Error("Validators contract Unpack error", "method", method, "error", err, "result", result)
+		return []common.Address{}, err
+	}
+	vals, ok := ret[0].([]common.Address)
+	if !ok {
+		log.Error("Validators contract format result error", "method", method, "error", err)
+		return []common.Address{}, err
+	}
+
+	return vals, nil
+}
+
+// GetCancelQueueValidators get canceling queue validators
+func (v *Validators) GetCancelQueueValidators(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) ([]common.Address, error) {
+	method := "getCancelQueueValidators"
+	data, err := v.abi.Pack(method)
+	if err != nil {
+		log.Error("Validators Pack error", "method", method, "error", err)
+	}
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("Validators contract execute error", "method", method, "error", err)
+		return []common.Address{}, err
+	}
+
+	ret, err := v.abi.Unpack(method, result)
+	if err != nil {
+		log.Error("Validators contract Unpack error", "method", method, "error", err, "result", result)
+		return []common.Address{}, err
+	}
+	vals, ok := ret[0].([]common.Address)
+	if !ok {
+		log.Error("Validators contract format result error", "method", method, "error", err)
+		return []common.Address{}, err
+	}
+
+	return vals, nil
+}
+
+// EffictiveValsLength function EffictiveValsLength
+func (v *Validators) EffictiveValsLength(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) (*big.Int, error) {
+	method := "effictiveValsLength"
+	data, err := v.abi.Pack(method)
+
+	if err != nil {
+		log.Error("Validators Pack error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("Validators contract execute error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+
+	ret, err := v.abi.Unpack(method, result)
+	if err != nil {
+		log.Error("Validators contract Unpack error", "method", method, "error", err, "result", result)
+		return big.NewInt(0), err
+	}
+	count, ok := ret[0].(*big.Int)
+	if !ok {
+		log.Error("Validators contract format result error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+	return count, nil
+
+}
+
+// InvalidValsLength function InvalidValsLength
+func (v *Validators) InvalidValsLength(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) (*big.Int, error) {
+	method := "invalidValsLength"
+	data, err := v.abi.Pack(method)
+
+	if err != nil {
+		log.Error("Validators Pack error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("Validators contract execute error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+
+	ret, err := v.abi.Unpack(method, result)
+	if err != nil {
+		log.Error("Validators contract Unpack error", "method", method, "error", err, "result", result)
+		return big.NewInt(0), err
+	}
+	count, ok := ret[0].(*big.Int)
+	if !ok {
+		log.Error("Validators contract format result error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+	return count, nil
+
+}
+
+// CancelQueueValidatorsLength function CancelQueueValidatorsLength
+func (v *Validators) CancelQueueValidatorsLength(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) (*big.Int, error) {
+	method := "CancelQueueValidatorsLength"
+	data, err := v.abi.Pack(method)
+
+	if err != nil {
+		log.Error("Validators Pack error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("Validators contract execute error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+
+	ret, err := v.abi.Unpack(method, result)
+	if err != nil {
+		log.Error("Validators contract Unpack error", "method", method, "error", err, "result", result)
+		return big.NewInt(0), err
+	}
+	count, ok := ret[0].(*big.Int)
+	if !ok {
+		log.Error("Validators contract format result error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+	return count, nil
+
+}
+
+// ValidatorToVotersLength function ValidatorToVotersLength
+func (v *Validators) ValidatorToVotersLength(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address) (*big.Int, error) {
+	method := "validatorToVotersLength"
+	data, err := v.abi.Pack(method, addr)
+
+	if err != nil {
+		log.Error("Validators Pack error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("Validators contract execute error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+
+	ret, err := v.abi.Unpack(method, result)
+	if err != nil {
+		log.Error("Validators contract Unpack error", "method", method, "error", err, "result", result)
+		return big.NewInt(0), err
+	}
+	count, ok := ret[0].(*big.Int)
+	if !ok {
+		log.Error("Validators contract format result error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+	return count, nil
+
+}
+
+// IsEffictiveValidator function IsEffictiveValidator
+func (v *Validators) IsEffictiveValidator(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address) (bool, error) {
+	method := "isEffictiveValidator"
+	data, err := v.abi.Pack(method, addr)
+
+	if err != nil {
+		log.Error("Validators Pack error", "method", method, "error", err)
+		return false, err
+	}
+
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("Validators contract execute error", "method", method, "error", err)
+		return false, err
+	}
+
+	ret, err := v.abi.Unpack(method, result)
+	if err != nil {
+		log.Error("Validators contract Unpack error", "method", method, "error", err, "result", result)
+		return false, err
+	}
+	val, ok := ret[0].(bool)
+	if !ok {
+		log.Error("Validators contract format result error", "method", method, "error", err)
+		return false, err
+	}
+	return val, nil
+
+}

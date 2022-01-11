@@ -129,6 +129,54 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'getCancelQueueValidators',
+			call: 'dpos_getCancelQueueValidators',
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getInvalidValidators',
+			call: 'dpos_getInvalidValidators',
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getVoters',
+			call: 'dpos_getVoters',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 4
+		}),
+		new web3._extend.Method({
+			name: 'effictiveValsLength',
+			call: 'dpos_getEffictiveValsLength',
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'invalidValsLength',
+			call: 'dpos_getInvalidValsLength',
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'cancelQueueValidatorsLength',
+			call: 'dpos_getCancelQueueValidatorsLength',
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'validatorToVotersLength',
+			call: 'dpos_getValidatorToVotersLength',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'isEffictiveValidator',
+			call: 'dpos_getIsEffictiveValidator',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
+		}),
+		new web3._extend.Method({
 			name: 'allProposalSets',
 			call: 'dpos_getAllProposalSets',
 			inputFormatter: [null,null,web3._extend.formatters.inputBlockNumberFormatter],
