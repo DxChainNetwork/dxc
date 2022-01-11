@@ -32,19 +32,6 @@ type ProposalInfo struct {
 	Status      uint8
 }
 
-type ProposalInfoDetail struct {
-	Id          string
-	Proposer    common.Address
-	PType       uint8
-	Deposit     *big.Int
-	Rate        uint8
-	Details     string
-	InitBlock   *big.Int
-	Guarantee   common.Address
-	UpdateBlock *big.Int
-	Status      uint8
-}
-
 // NewProposals return Proposals contract instance
 func NewProposals() *Proposals {
 	return &Proposals{
@@ -73,9 +60,9 @@ func (p *Proposals) InitProposal(statedb *state.StateDB, header *types.Header, c
 }
 
 // AddressProposalSets function AddressProposalSets
-func (p *Proposals) AddressProposalSets(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, page int64, size int64) ([][4]byte, error) {
+func (p *Proposals) AddressProposalSets(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, page *big.Int, size *big.Int) ([][4]byte, error) {
 	method := "addressProposalSets"
-	data, err := p.abi.Pack(method, addr, big.NewInt(page), big.NewInt(size))
+	data, err := p.abi.Pack(method, addr, page, size)
 
 	if err != nil {
 		log.Error("can't pack Proposals contract method", "method", method)
@@ -103,9 +90,9 @@ func (p *Proposals) AddressProposalSets(statedb *state.StateDB, header *types.He
 }
 
 // AllProposalSets function AllProposalSets
-func (p *Proposals) AllProposalSets(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, page int64, size int64) ([][4]byte, error) {
+func (p *Proposals) AllProposalSets(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, page *big.Int, size *big.Int) ([][4]byte, error) {
 	method := "allProposalSets"
-	data, err := p.abi.Pack(method, big.NewInt(page), big.NewInt(size))
+	data, err := p.abi.Pack(method, page, size)
 
 	if err != nil {
 		log.Error("can't pack Proposals contract method", "method", method)
@@ -133,9 +120,9 @@ func (p *Proposals) AllProposalSets(statedb *state.StateDB, header *types.Header
 }
 
 // AddressProposals function AddressProposals
-func (p *Proposals) AddressProposals(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, page int64, size int64) ([]ProposalInfo, error) {
+func (p *Proposals) AddressProposals(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, page *big.Int, size *big.Int) ([]ProposalInfo, error) {
 	method := "addressProposals"
-	data, err := p.abi.Pack(method, addr, big.NewInt(page), big.NewInt(size))
+	data, err := p.abi.Pack(method, addr, page, size)
 
 	if err != nil {
 		log.Error("can't pack Proposals contract method", "method", method)
@@ -157,9 +144,9 @@ func (p *Proposals) AddressProposals(statedb *state.StateDB, header *types.Heade
 }
 
 // AllProposals function AllProposals
-func (p *Proposals) AllProposals(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, page int64, size int64) ([]ProposalInfo, error) {
+func (p *Proposals) AllProposals(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, page *big.Int, size *big.Int) ([]ProposalInfo, error) {
 	method := "allProposals"
-	data, err := p.abi.Pack(method, big.NewInt(page), big.NewInt(size))
+	data, err := p.abi.Pack(method, page, size)
 
 	if err != nil {
 		log.Error("can't pack Proposals contract method", "method", method)

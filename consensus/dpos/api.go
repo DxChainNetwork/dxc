@@ -35,6 +35,19 @@ type API struct {
 	dpos  *Dpos
 }
 
+type ProposalInfo struct {
+	Id          string
+	Proposer    common.Address
+	PType       uint8
+	Deposit     *big.Int
+	Rate        uint8
+	Details     string
+	InitBlock   *big.Int
+	Guarantee   common.Address
+	UpdateBlock *big.Int
+	Status      uint8
+}
+
 // GetSnapshot retrieves the state snapshot at a given block.
 func (api *API) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
 	// Retrieve the requested block number (or current if none requested)
@@ -164,7 +177,7 @@ func (api *API) GetMinDeposit(number *rpc.BlockNumber) (*big.Int, error) {
 }
 
 // GetAddressProposalSets return the address proposal id
-func (api *API) GetAddressProposalSets(addr common.Address, page int64, size int64) ([]string, error) {
+func (api *API) GetAddressProposalSets(addr common.Address, page *big.Int, size *big.Int) ([]string, error) {
 	proposals := systemcontract.NewProposals()
 	var header *types.Header
 	header = api.chain.CurrentHeader()
@@ -188,7 +201,7 @@ func (api *API) GetAddressProposalSets(addr common.Address, page int64, size int
 }
 
 // GetAllProposalSets return all proposals id
-func (api *API) GetAllProposalSets(page int64, size int64) ([]string, error) {
+func (api *API) GetAllProposalSets(page *big.Int, size *big.Int) ([]string, error) {
 	proposals := systemcontract.NewProposals()
 	var header *types.Header
 	header = api.chain.CurrentHeader()
@@ -212,24 +225,24 @@ func (api *API) GetAllProposalSets(page int64, size int64) ([]string, error) {
 }
 
 // GetAllProposals return all proposals
-func (api *API) GetAllProposals(page int64, size int64) ([]systemcontract.ProposalInfoDetail, error) {
+func (api *API) GetAllProposals(page *big.Int, size *big.Int) ([]ProposalInfo, error) {
 	proposals := systemcontract.NewProposals()
 	var header *types.Header
 	header = api.chain.CurrentHeader()
 	if header == nil {
-		return []systemcontract.ProposalInfoDetail{}, errUnknownBlock
+		return []ProposalInfo{}, errUnknownBlock
 	}
 	state, err := api.dpos.stateFn(header.Root)
 	if err != nil {
-		return []systemcontract.ProposalInfoDetail{}, err
+		return []ProposalInfo{}, err
 	}
 	proposalInfos, err := proposals.AllProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
 	if err != nil {
-		return []systemcontract.ProposalInfoDetail{}, err
+		return []ProposalInfo{}, err
 	}
-	var newProposals []systemcontract.ProposalInfoDetail
+	var newProposals []ProposalInfo
 	for i := 0; i < len(proposalInfos); i++ {
-		detail := systemcontract.ProposalInfoDetail{
+		detail := ProposalInfo{
 			Id:          hexutil.Encode(proposalInfos[i].Id[0:len(proposalInfos[i].Id)]),
 			Proposer:    proposalInfos[i].Proposer,
 			UpdateBlock: proposalInfos[i].UpdateBlock,
@@ -247,24 +260,24 @@ func (api *API) GetAllProposals(page int64, size int64) ([]systemcontract.Propos
 }
 
 // GetAddressProposals return the address proposals
-func (api *API) GetAddressProposals(addr common.Address, page int64, size int64) ([]systemcontract.ProposalInfoDetail, error) {
+func (api *API) GetAddressProposals(addr common.Address, page *big.Int, size *big.Int) ([]ProposalInfo, error) {
 	proposals := systemcontract.NewProposals()
 	var header *types.Header
 	header = api.chain.CurrentHeader()
 	if header == nil {
-		return []systemcontract.ProposalInfoDetail{}, errUnknownBlock
+		return []ProposalInfo{}, errUnknownBlock
 	}
 	state, err := api.dpos.stateFn(header.Root)
 	if err != nil {
-		return []systemcontract.ProposalInfoDetail{}, err
+		return []ProposalInfo{}, err
 	}
 	proposalInfos, err := proposals.AddressProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
 	if err != nil {
-		return []systemcontract.ProposalInfoDetail{}, err
+		return []ProposalInfo{}, err
 	}
-	var newProposals []systemcontract.ProposalInfoDetail
+	var newProposals []ProposalInfo
 	for i := 0; i < len(proposalInfos); i++ {
-		detail := systemcontract.ProposalInfoDetail{
+		detail := ProposalInfo{
 			Id:          hexutil.Encode(proposalInfos[i].Id[0:len(proposalInfos[i].Id)]),
 			Proposer:    proposalInfos[i].Proposer,
 			UpdateBlock: proposalInfos[i].UpdateBlock,
