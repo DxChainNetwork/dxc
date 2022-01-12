@@ -350,6 +350,8 @@ func (api *API) GetMinDeposit(number *rpc.BlockNumber) (*big.Int, error) {
 
 }
 
+// Proposals
+
 // GetAddressProposalSets return the address proposal id
 func (api *API) GetAddressProposalSets(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]string, error) {
 	proposals := systemcontract.NewProposals()
@@ -516,6 +518,157 @@ func (api *API) GetAddressProposalCount(addr common.Address, number *rpc.BlockNu
 		return big.NewInt(0), err
 	}
 	return count, nil
+}
+
+// NodeVotes
+
+// GetPendingVoteReward return the voter vote the validator rewards
+func (api *API) GetPendingVoteReward(val common.Address, voter common.Address, number *rpc.BlockNumber) (*big.Int, error) {
+	nodeVotes := systemcontract.NewNodeVotes()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	value, err := nodeVotes.PendingVoteReward(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, val, voter)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	return value, nil
+}
+
+// GetPendingRedeem return the voter redeem validators voters
+func (api *API) GetPendingRedeem(addr common.Address, number *rpc.BlockNumber) (*big.Int, error) {
+	nodeVotes := systemcontract.NewNodeVotes()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	value, err := nodeVotes.PendingRedeem(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	return value, nil
+}
+
+// GetVoteListLength return the voter vote list length
+func (api *API) GetVoteListLength(addr common.Address, number *rpc.BlockNumber) (*big.Int, error) {
+	nodeVotes := systemcontract.NewNodeVotes()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	count, err := nodeVotes.VoteListLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	return count, nil
+}
+
+// GetCancelVoteValidatorListLength return the voter cancel vote list length
+func (api *API) GetCancelVoteValidatorListLength(addr common.Address, number *rpc.BlockNumber) (*big.Int, error) {
+	nodeVotes := systemcontract.NewNodeVotes()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	count, err := nodeVotes.CancelVoteValidatorListLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	return count, nil
+}
+
+// GetCancelVoteValidatorList return the address cancel vote validator list
+func (api *API) GetCancelVoteValidatorList(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]common.Address, error) {
+	nodeVotes := systemcontract.NewNodeVotes()
+	var header *types.Header
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	if header == nil {
+		return []common.Address{}, errUnknownBlock
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return []common.Address{}, err
+	}
+	vals, err := nodeVotes.CancelVoteValidatorList(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
+	if err != nil {
+		return []common.Address{}, err
+	}
+	return vals, nil
+}
+
+// GetVoteList return the voter vote list
+func (api *API) GetVoteList(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]systemcontract.VoteInfo, error) {
+	nodeVotes := systemcontract.NewNodeVotes()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return []systemcontract.VoteInfo{}, err
+	}
+	voteLists, err := nodeVotes.VoteList(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
+	if err != nil {
+		return []systemcontract.VoteInfo{}, err
+	}
+	return voteLists, nil
+}
+
+// GetRedeemInfo return the voter redeem info
+func (api *API) GetRedeemInfo(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]systemcontract.RedeemVoterInfo, error) {
+	nodeVotes := systemcontract.NewNodeVotes()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return []systemcontract.RedeemVoterInfo{}, err
+	}
+	redeemInfos, err := nodeVotes.RedeemInfo(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
+	if err != nil {
+		return []systemcontract.RedeemVoterInfo{}, err
+	}
+	return redeemInfos, nil
 }
 
 type status struct {

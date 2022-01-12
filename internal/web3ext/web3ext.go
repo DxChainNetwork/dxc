@@ -212,6 +212,49 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
 			params: 2
 		}),
+		new web3._extend.Method({
+			name: 'pendingVoteReward',
+			call: 'dpos_getPendingVoteReward',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'pendingRedeem',
+			call: 'dpos_getPendingRedeem',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'voteListLength',
+			call: 'dpos_getVoteListLength',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'cancelVoteValidatorListLength',
+			call: 'dpos_getCancelVoteValidatorListLength',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'cancelVoteValidatorList',
+			call: 'dpos_getCancelVoteValidatorList',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 4
+		}),
+		new web3._extend.Method({
+			name: 'voteList',
+			call: 'dpos_getVoteList',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 4
+		}),
+		new web3._extend.Method({
+			name: 'redeemInfo',
+			call: 'dpos_getRedeemInfo',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 4
+		}),
+	
 	],
 	properties: [
 		new web3._extend.Property({
