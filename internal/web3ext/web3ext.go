@@ -265,6 +265,39 @@ web3._extend({
 			call: 'dpos_initProposal',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'initProposal',
+			call: 'dpos_initProposal',
+			inputFormatter: [null,null,null,web3._extend.formatters.inputCallFormatter],
+			params: 4
+		}),
+		new web3._extend.Method({
+			name: 'updateProposal',
+			call: 'dpos_updateProposal',
+			inputFormatter: [null,null,null,null,function(val) {
+				val = val == undefined? {} : val
+				return web3._extend.formatters.inputCallFormatter(val)
+			}],
+			params: 5
+		}),
+		new web3._extend.Method({
+			name: 'cancelProposal',
+			call: 'dpos_cancelProposal',
+			inputFormatter: [null,function(val) {
+				val = val == undefined? {} : val
+				return web3._extend.formatters.inputCallFormatter(val)
+			}],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'guarantee',
+			call: 'dpos_guarantee',
+			inputFormatter: [null,function(val) {
+				val = val == undefined? {} : val
+				return web3._extend.formatters.inputCallFormatter(val)
+			}],
+			params: 2
+		}),
 	],
 });
 `
