@@ -261,14 +261,42 @@ web3._extend({
 			params: 4
 		}),
 		new web3._extend.Method({
-			name: 'initProposal',
-			call: 'dpos_initProposal',
-			params: 1
+			name: 'getEpochInfo',
+			call: 'dpos_getEpochInfo',
+			inputFormatter: [null,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'getValRewardEpochs',
+			call: 'dpos_getValRewardEpochs',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'getValRewardInfoByEpoch',
+			call: 'dpos_getValRewardInfoByEpoch',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'pendingValReward',
+			call: 'dpos_getPendingValReward',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'pendingVoterReward',
+			call: 'dpos_getPendingVoterReward',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'initProposal',
 			call: 'dpos_initProposal',
-			inputFormatter: [null,null,null,web3._extend.formatters.inputCallFormatter],
+			inputFormatter: [null,null,null,function(val) {
+				val = val == undefined? {} : val
+				return web3._extend.formatters.inputCallFormatter(val)
+			}],
 			params: 4
 		}),
 		new web3._extend.Method({
