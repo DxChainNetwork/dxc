@@ -117,13 +117,19 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'getCurrentEpochValidators',
+			name: 'minDeposit',
+			call: 'dpos_getMinDeposit',
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'currentEpochValidators',
 			call: 'dpos_getCurrentEpochValidators',
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'getEffictiveValidators',
+			name: 'effictiveValidators',
 			call: 'dpos_getEffictiveValidators',
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 			params: 1
@@ -164,13 +170,12 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
 			params: 2
 		}),
-	],
-	properties: [
-		new web3._extend.Property({
-			name: 'minDeposit',
-			getter: 'dpos_getMinDeposit',
+		new web3._extend.Method({
+			name: 'initProposal',
+			call: 'dpos_initProposal',
+			params: 1
 		}),
-	]
+	],
 });
 `
 
