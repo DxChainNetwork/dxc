@@ -671,6 +671,119 @@ func (api *API) GetRedeemInfo(addr common.Address, page *big.Int, size *big.Int,
 	return redeemInfos, nil
 }
 
+// systemRewards
+
+// GetEpochInfo return the epoch info
+func (api *API) GetEpochInfo(epoch *big.Int, number *rpc.BlockNumber) (*systemcontract.EpochInfo, error) {
+	systemRewards := systemcontract.NewSystemRewards()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return &systemcontract.EpochInfo{}, err
+	}
+	epochInfo, err := systemRewards.GetEpochInfo(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, epoch)
+	if err != nil {
+		return &systemcontract.EpochInfo{}, err
+	}
+	return epochInfo, nil
+}
+
+// GetValRewardEpochs return the address reward epochs
+func (api *API) GetValRewardEpochs(addr common.Address, number *rpc.BlockNumber) ([]*big.Int, error) {
+	systemRewards := systemcontract.NewSystemRewards()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return []*big.Int{}, err
+	}
+	epochs, err := systemRewards.GetValRewardEpochs(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return []*big.Int{}, err
+	}
+	return epochs, nil
+}
+
+// GetValRewardInfoByEpoch return the address and the epoch reward info
+func (api *API) GetValRewardInfoByEpoch(addr common.Address, epoch *big.Int, number *rpc.BlockNumber) (*systemcontract.Reward, error) {
+	systemRewards := systemcontract.NewSystemRewards()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return &systemcontract.Reward{}, err
+	}
+	rewards, err := systemRewards.GetValRewardInfoByEpoch(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, epoch)
+	if err != nil {
+		return &systemcontract.Reward{}, err
+	}
+	return rewards, nil
+}
+
+// GetPendingValReward return the address reward
+func (api *API) GetPendingValReward(addr common.Address, number *rpc.BlockNumber) (map[string]*big.Int, error) {
+	systemRewards := systemcontract.NewSystemRewards()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return map[string]*big.Int{}, err
+	}
+	avaliable, frozen, err := systemRewards.PendingValReward(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return map[string]*big.Int{}, err
+	}
+	result := make(map[string]*big.Int)
+	result["avaliable"] = avaliable
+	result["frozen"] = frozen
+	return result, nil
+}
+
+// GetPendingVoterReward return the address reward
+func (api *API) GetPendingVoterReward(addr common.Address, number *rpc.BlockNumber) (map[string]*big.Int, error) {
+	systemRewards := systemcontract.NewSystemRewards()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return map[string]*big.Int{}, err
+	}
+	sumReward, accReward, err := systemRewards.PendingVoterReward(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return map[string]*big.Int{}, err
+	}
+	result := make(map[string]*big.Int)
+	result["sumReward"] = sumReward
+	result["accReward"] = accReward
+	return result, nil
+}
+
 type status struct {
 	InturnPercent float64                `json:"inturnPercent"`
 	SigningStatus map[common.Address]int `json:"sealerActivity"`
