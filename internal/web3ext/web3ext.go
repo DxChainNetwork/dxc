@@ -293,83 +293,123 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'initProposal',
 			call: 'dpos_initProposal',
-			inputFormatter: [null,null,null,function(val) {
-				val = val == undefined? {} : val
-				return web3._extend.formatters.inputCallFormatter(val)
+			inputFormatter: [null,null,null,function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
 			}],
 			params: 4
 		}),
 		new web3._extend.Method({
 			name: 'updateProposal',
 			call: 'dpos_updateProposal',
-			inputFormatter: [null,null,null,null,function(val) {
-				val = val == undefined? {} : val
-				return web3._extend.formatters.inputCallFormatter(val)
+			inputFormatter: [null,null,null,null,function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
 			}],
 			params: 5
 		}),
 		new web3._extend.Method({
 			name: 'cancelProposal',
 			call: 'dpos_cancelProposal',
-			inputFormatter: [null,function(val) {
-				val = val == undefined? {} : val
-				return web3._extend.formatters.inputCallFormatter(val)
+			inputFormatter: [null,function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
 			}],
 			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'guarantee',
 			call: 'dpos_guarantee',
-			inputFormatter: [null,function(val) {
-				val = val == undefined? {} : val
-				return web3._extend.formatters.inputCallFormatter(val)
+			inputFormatter: [null,function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
 			}],
 			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'updateValidatorDeposit',
 			call: 'dpos_updateValidatorDeposit',
-			inputFormatter: [null,function(val) {
-				val = val == undefined? {} : val
-				return web3._extend.formatters.inputCallFormatter(val)
+			inputFormatter: [null,function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
 			}],
 			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'updateValidatorRate',
 			call: 'dpos_updateValidatorRate',
-			inputFormatter: [null,function(val) {
-				val = val == undefined? {} : val
-				return web3._extend.formatters.inputCallFormatter(val)
+			inputFormatter: [null,function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
 			}],
 			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'validatorUnstake',
 			call: 'dpos_validatorUnstake',
-			inputFormatter: [function(val) {
-				val = val == undefined? {} : val
-				return web3._extend.formatters.inputCallFormatter(val)
+			inputFormatter: [function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
 			}],
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'validatorRedeem',
 			call: 'dpos_validatorRedeem',
-			inputFormatter: [function(val) {
-				val = val == undefined? {} : val
-				return web3._extend.formatters.inputCallFormatter(val)
+			inputFormatter: [function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
 			}],
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'earnValReward',
 			call: 'dpos_earnValReward',
-			inputFormatter: [function(val) {
-				val = val == undefined? {} : val
-				return web3._extend.formatters.inputCallFormatter(val)
+			inputFormatter: [function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
 			}],
 			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'earnVoterReward',
+			call: 'dpos_earnVoterReward',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
+			}],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'vote',
+			call: 'dpos_vote',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
+			}],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'cancelVote',
+			call: 'dpos_cancelVote',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
+			}],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'voterRedeem',
+			call: 'dpos_voterRedeem',
+			inputFormatter: [function(vals) {
+				var formatVals = [];
+				for (var i = 0; i < vals.length; i++) { formatVals.push(web3._extend.formatters.inputAddressFormatter(vals[i])); }
+				return formatVals;
+			}, function(options) {
+					options = options == undefined? {} : options
+					return web3._extend.formatters.inputCallFormatter(options)
+			}],
+			params: 2
 		}),
 	],
 });
