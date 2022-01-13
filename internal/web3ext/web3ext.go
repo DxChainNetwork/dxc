@@ -326,6 +326,42 @@ web3._extend({
 			}],
 			params: 2
 		}),
+		new web3._extend.Method({
+			name: 'updateValidatorDeposit',
+			call: 'dpos_updateValidatorDeposit',
+			inputFormatter: [null,function(val) {
+				val = val == undefined? {} : val
+				return web3._extend.formatters.inputCallFormatter(val)
+			}],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'updateValidatorRate',
+			call: 'dpos_updateValidatorRate',
+			inputFormatter: [null,function(val) {
+				val = val == undefined? {} : val
+				return web3._extend.formatters.inputCallFormatter(val)
+			}],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'validatorUnstake',
+			call: 'dpos_validatorUnstake',
+			inputFormatter: [function(val) {
+				val = val == undefined? {} : val
+				return web3._extend.formatters.inputCallFormatter(val)
+			}],
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'validatorRedeem',
+			call: 'dpos_validatorRedeem',
+			inputFormatter: [function(val) {
+				val = val == undefined? {} : val
+				return web3._extend.formatters.inputCallFormatter(val)
+			}],
+			params: 1
+		}),
 	],
 });
 `

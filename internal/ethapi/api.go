@@ -1113,6 +1113,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 	} else {
 		// Retrieve the block to act as the gas ceiling
 		block, err := b.BlockByNumberOrHash(ctx, blockNrOrHash)
+		log.Info("DoEstimateGas get block", "block", *blockNrOrHash.BlockNumber, "error", err)
 		if err != nil {
 			return 0, err
 		}
