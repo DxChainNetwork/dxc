@@ -18,9 +18,8 @@ package dpos
 
 import (
 	"fmt"
-	"github.com/DxChainNetwork/dxc/common/hexutil"
-
 	"github.com/DxChainNetwork/dxc/common"
+	"github.com/DxChainNetwork/dxc/common/hexutil"
 	"github.com/DxChainNetwork/dxc/consensus"
 	"github.com/DxChainNetwork/dxc/consensus/dpos/systemcontract"
 	"github.com/DxChainNetwork/dxc/core/types"
