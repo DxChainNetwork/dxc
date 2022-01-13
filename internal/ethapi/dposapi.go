@@ -368,3 +368,127 @@ func (pd *PublicDposTxAPI) EarnValReward(args *TransactionArgs) (common.Hash, er
 
 	return txHash, nil
 }
+
+// EarnVoterReward earn function of NodeVotes contract
+func (pd *PublicDposTxAPI) EarnVoterReward(val common.Address, args *TransactionArgs) (common.Hash, error) {
+	ctx := context.Background()
+	args.To = &systemcontract.NodeVotesContractAddr
+
+	if err := pd.prepareAccount(args); err != nil {
+		return common.Hash{}, err
+	}
+
+	pd.nonceLock.LockAddr(*args.From)
+	defer pd.nonceLock.UnlockAddr(*args.From)
+
+	log.Info("earn voter reward", "from", args.From)
+
+	method := "earn"
+	abiMap := systemcontract.GetInteractiveABI()
+
+	data, err := abiMap[systemcontract.NodeVotesContractName].Pack(method, val)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	args.Data = (*hexutil.Bytes)(&data)
+
+	txHash, err := pd.sendDposTx(ctx, args)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
+
+// Vote vote function of NodeVotes contract
+func (pd *PublicDposTxAPI) Vote(val common.Address, args *TransactionArgs) (common.Hash, error) {
+	ctx := context.Background()
+	args.To = &systemcontract.NodeVotesContractAddr
+
+	if err := pd.prepareAccount(args); err != nil {
+		return common.Hash{}, err
+	}
+
+	pd.nonceLock.LockAddr(*args.From)
+	defer pd.nonceLock.UnlockAddr(*args.From)
+
+	log.Info("vote", "voter", args.From, "validator", val)
+
+	method := "vote"
+	abiMap := systemcontract.GetInteractiveABI()
+
+	data, err := abiMap[systemcontract.NodeVotesContractName].Pack(method, val)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	args.Data = (*hexutil.Bytes)(&data)
+
+	txHash, err := pd.sendDposTx(ctx, args)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
+
+// CancelVote cancelVote function of NodeVotes contract
+func (pd *PublicDposTxAPI) CancelVote(val common.Address, args *TransactionArgs) (common.Hash, error) {
+	ctx := context.Background()
+	args.To = &systemcontract.NodeVotesContractAddr
+
+	if err := pd.prepareAccount(args); err != nil {
+		return common.Hash{}, err
+	}
+
+	pd.nonceLock.LockAddr(*args.From)
+	defer pd.nonceLock.UnlockAddr(*args.From)
+
+	log.Info("cancelVote", "voter", args.From, "validator", val)
+
+	method := "cancelVote"
+	abiMap := systemcontract.GetInteractiveABI()
+
+	data, err := abiMap[systemcontract.NodeVotesContractName].Pack(method, val)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	args.Data = (*hexutil.Bytes)(&data)
+
+	txHash, err := pd.sendDposTx(ctx, args)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
+
+// VoterRedeem redeem function of NodeVotes contract
+func (pd *PublicDposTxAPI) VoterRedeem(vals []common.Address, args *TransactionArgs) (common.Hash, error) {
+	ctx := context.Background()
+	args.To = &systemcontract.NodeVotesContractAddr
+
+	if err := pd.prepareAccount(args); err != nil {
+		return common.Hash{}, err
+	}
+
+	pd.nonceLock.LockAddr(*args.From)
+	defer pd.nonceLock.UnlockAddr(*args.From)
+
+	log.Info("voter redeem", "voter", args.From, "validators", vals)
+
+	method := "redeem"
+	abiMap := systemcontract.GetInteractiveABI()
+
+	data, err := abiMap[systemcontract.NodeVotesContractName].Pack(method, vals)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	args.Data = (*hexutil.Bytes)(&data)
+
+	txHash, err := pd.sendDposTx(ctx, args)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
