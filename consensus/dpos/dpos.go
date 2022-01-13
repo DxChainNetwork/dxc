@@ -884,6 +884,10 @@ func (d *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, head
 	if err != nil {
 		return err
 	}
+	// Bail out if we're unauthorized to sign a block
+	if _, authorized := snap.Validators[header.Coinbase]; !authorized {
+		return nil
+	}
 
 	genesisValidators := snap.validators()
 	if len(genesisValidators) == 0 || len(genesisValidators) > maxValidators {
