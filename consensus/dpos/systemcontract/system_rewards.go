@@ -32,6 +32,12 @@ type Reward struct {
 	CancelVotes             *big.Int
 }
 
+type SysRewards struct {
+	NextValRewardEpochIndex        *big.Int
+	NextDelegatorsRewardEpochIndex *big.Int
+	AccRewardPerVote               *big.Int
+}
+
 // NewSystemRewards return SystemRewards contract instance
 func NewSystemRewards() *SystemRewards {
 	return &SystemRewards{
@@ -183,4 +189,29 @@ func (s *SystemRewards) PendingVoterReward(statedb *state.StateDB, header *types
 		return big.NewInt(0), big.NewInt(0), err
 	}
 	return sumReward, accReward, nil
+}
+
+// GetSysRewards return the address sys rewards
+func (s *SystemRewards) GetSysRewards(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address) (*SysRewards, error) {
+	method := "sysRewards"
+
+	data, err := s.abi.Pack(method, addr)
+	if err != nil {
+		log.Error("can't pack SystemRewards contract method", "method", method)
+		return &SysRewards{}, err
+	}
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &s.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("SystemRewards contract execute error", "method", method, "error", err)
+		return &SysRewards{}, err
+	}
+	rewardInfo := &SysRewards{}
+	err = s.abi.UnpackIntoInterface(rewardInfo, method, result)
+	if err != nil {
+		log.Error("SystemRewards contract Unpack error", "method", method, "error", err, "result", result)
+		return &SysRewards{}, err
+	}
+
+	return rewardInfo, nil
 }

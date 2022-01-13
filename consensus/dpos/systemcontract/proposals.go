@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/DxChainNetwork/dxc/accounts/abi"
 	"github.com/DxChainNetwork/dxc/common"
+	"github.com/DxChainNetwork/dxc/common/hexutil"
 	"github.com/DxChainNetwork/dxc/consensus/dpos/vmcaller"
 	"github.com/DxChainNetwork/dxc/core"
 	"github.com/DxChainNetwork/dxc/core/state"
@@ -226,4 +227,35 @@ func (p *Proposals) ProposalCount(statedb *state.StateDB, header *types.Header, 
 		log.Info("AllProposalSets result", "result", count)
 		return count, nil
 	}
+}
+
+// GetProposal function GetProposal
+func (p *Proposals) GetProposal(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, id string) (*ProposalInfo, error) {
+	method := "proposalInfos"
+	idBytes, err := hexutil.Decode(id)
+	if err != nil {
+		return &ProposalInfo{}, err
+	}
+	var idByte4 [4]byte
+	copy(idByte4[:], idBytes[:4])
+	data, err := p.abi.Pack(method, idByte4)
+
+	if err != nil {
+		log.Error("can't pack Proposals contract method", "method", method)
+		return &ProposalInfo{}, err
+	}
+
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &p.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("GetProposal result", "error", err)
+		return &ProposalInfo{}, err
+	}
+	proposalInfo := &ProposalInfo{}
+	err = p.abi.UnpackIntoInterface(proposalInfo, method, result)
+	if err != nil {
+		log.Error("GetProposal Unpack", "error", err)
+		return &ProposalInfo{}, err
+	}
+	return proposalInfo, nil
 }
