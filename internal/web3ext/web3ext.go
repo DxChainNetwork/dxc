@@ -386,6 +386,15 @@ web3._extend({
 			}],
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'earnValReward',
+			call: 'dpos_earnValReward',
+			inputFormatter: [function(val) {
+				val = val == undefined? {} : val
+				return web3._extend.formatters.inputCallFormatter(val)
+			}],
+			params: 1
+		}),
 	],
 });
 `
