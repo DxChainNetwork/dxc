@@ -23,6 +23,7 @@ import (
 	"github.com/DxChainNetwork/dxc/consensus"
 	"github.com/DxChainNetwork/dxc/consensus/dpos/systemcontract"
 	"github.com/DxChainNetwork/dxc/core/types"
+	"github.com/DxChainNetwork/dxc/log"
 	"github.com/DxChainNetwork/dxc/rpc"
 	"math/big"
 )
@@ -257,6 +258,32 @@ func (api *API) GetVoters(addr common.Address, page *big.Int, size *big.Int, num
 	if err != nil {
 		return []common.Address{}, err
 	}
+	if page == nil && size == nil {
+		count, err := validators.ValidatorToVotersLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+		log.Info("hhhhhhhhhhh", "count", count)
+		if err != nil {
+			return []common.Address{}, err
+		}
+		size = big.NewInt(50)
+		equal := count.Cmp(size)
+		if equal < 1 {
+			page = big.NewInt(1)
+		} else {
+			var allVoters []common.Address
+			var res big.Int
+			div := res.Div(count, size)
+			div = res.Add(div, big.NewInt(1))
+			for i := int64(1); i <= div.Int64(); i++ {
+				voters, err := validators.GetVoters(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
+				if err != nil {
+					return []common.Address{}, err
+				}
+				allVoters = append(allVoters, voters...)
+			}
+			return allVoters, nil
+
+		}
+	}
 	voters, err := validators.GetVoters(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
 	if err != nil {
 		return []common.Address{}, err
@@ -409,6 +436,36 @@ func (api *API) GetAddressProposalSets(addr common.Address, page *big.Int, size 
 	if err != nil {
 		return []string{}, err
 	}
+	if page == nil && size == nil {
+		count, err := proposals.AddressProposalCount(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+		if err != nil {
+			return []string{}, err
+		}
+		size = big.NewInt(50)
+		equal := count.Cmp(size)
+		if equal < 1 {
+			page = big.NewInt(1)
+
+		} else {
+			var allSets [][4]byte
+			var res big.Int
+			div := res.Div(count, size)
+			div = res.Add(div, big.NewInt(1))
+			for i := int64(1); i <= div.Int64(); i++ {
+				proposalIds, err := proposals.AddressProposalSets(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
+				if err != nil {
+					return []string{}, err
+				}
+				allSets = append(allSets, proposalIds...)
+			}
+			var newProposalIds []string
+			for i := 0; i < len(allSets); i++ {
+				id := hexutil.Encode(allSets[i][0:len(allSets[i])])
+				newProposalIds = append(newProposalIds, id)
+			}
+			return newProposalIds, nil
+		}
+	}
 	proposalIds, err := proposals.AddressProposalSets(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
 	if err != nil {
 		return []string{}, err
@@ -435,6 +492,36 @@ func (api *API) GetAllProposalSets(page *big.Int, size *big.Int, number *rpc.Blo
 	if err != nil {
 		return []string{}, err
 	}
+	if page == nil && size == nil {
+		count, err := proposals.ProposalCount(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+		if err != nil {
+			return []string{}, err
+		}
+		size = big.NewInt(50)
+		equal := count.Cmp(size)
+		if equal < 1 {
+			page = big.NewInt(1)
+
+		} else {
+			var allSets [][4]byte
+			var res big.Int
+			div := res.Div(count, size)
+			div = res.Add(div, big.NewInt(1))
+			for i := int64(1); i <= div.Int64(); i++ {
+				proposalIds, err := proposals.AllProposalSets(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, big.NewInt(i), size)
+				if err != nil {
+					return []string{}, err
+				}
+				allSets = append(allSets, proposalIds...)
+			}
+			var newProposalIds []string
+			for i := 0; i < len(allSets); i++ {
+				id := hexutil.Encode(allSets[i][0:len(allSets[i])])
+				newProposalIds = append(newProposalIds, id)
+			}
+			return newProposalIds, nil
+		}
+	}
 	proposalIds, err := proposals.AllProposalSets(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
 	if err != nil {
 		return []string{}, err
@@ -460,6 +547,46 @@ func (api *API) GetAllProposals(page *big.Int, size *big.Int, number *rpc.BlockN
 	state, err := api.dpos.stateFn(header.Root)
 	if err != nil {
 		return []ProposalInfo{}, err
+	}
+	if page == nil && size == nil {
+		count, err := proposals.ProposalCount(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+		if err != nil {
+			return []ProposalInfo{}, err
+		}
+		size = big.NewInt(50)
+		equal := count.Cmp(size)
+		if equal < 1 {
+			page = big.NewInt(1)
+
+		} else {
+			var allProposals []systemcontract.ProposalInfo
+			var res big.Int
+			div := res.Div(count, size)
+			div = res.Add(div, big.NewInt(1))
+			for i := int64(1); i <= div.Int64(); i++ {
+				proposalIds, err := proposals.AllProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, big.NewInt(i), size)
+				if err != nil {
+					return []ProposalInfo{}, err
+				}
+				allProposals = append(allProposals, proposalIds...)
+			}
+			var newProposals []ProposalInfo
+			for i := 0; i < len(allProposals); i++ {
+				detail := ProposalInfo{
+					Id:          hexutil.Encode(allProposals[i].Id[0:len(allProposals[i].Id)]),
+					Proposer:    allProposals[i].Proposer,
+					UpdateBlock: allProposals[i].UpdateBlock,
+					PType:       allProposals[i].PType,
+					Guarantee:   allProposals[i].Guarantee,
+					Deposit:     allProposals[i].Deposit,
+					Details:     allProposals[i].Details,
+					InitBlock:   allProposals[i].InitBlock,
+					Rate:        allProposals[i].Rate,
+					Status:      allProposals[i].Status,
+				}
+				newProposals = append(newProposals, detail)
+			}
+		}
 	}
 	proposalInfos, err := proposals.AllProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
 	if err != nil {
@@ -530,6 +657,46 @@ func (api *API) GetAddressProposals(addr common.Address, page *big.Int, size *bi
 	state, err := api.dpos.stateFn(header.Root)
 	if err != nil {
 		return []ProposalInfo{}, err
+	}
+	if page == nil && size == nil {
+		count, err := proposals.AddressProposalCount(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+		if err != nil {
+			return []ProposalInfo{}, err
+		}
+		size = big.NewInt(50)
+		equal := count.Cmp(size)
+		if equal < 1 {
+			page = big.NewInt(1)
+
+		} else {
+			var allProposals []systemcontract.ProposalInfo
+			var res big.Int
+			div := res.Div(count, size)
+			div = res.Add(div, big.NewInt(1))
+			for i := int64(1); i <= div.Int64(); i++ {
+				proposalIds, err := proposals.AddressProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
+				if err != nil {
+					return []ProposalInfo{}, err
+				}
+				allProposals = append(allProposals, proposalIds...)
+			}
+			var newProposals []ProposalInfo
+			for i := 0; i < len(allProposals); i++ {
+				detail := ProposalInfo{
+					Id:          hexutil.Encode(allProposals[i].Id[0:len(allProposals[i].Id)]),
+					Proposer:    allProposals[i].Proposer,
+					UpdateBlock: allProposals[i].UpdateBlock,
+					PType:       allProposals[i].PType,
+					Guarantee:   allProposals[i].Guarantee,
+					Deposit:     allProposals[i].Deposit,
+					Details:     allProposals[i].Details,
+					InitBlock:   allProposals[i].InitBlock,
+					Rate:        allProposals[i].Rate,
+					Status:      allProposals[i].Status,
+				}
+				newProposals = append(newProposals, detail)
+			}
+		}
 	}
 	proposalInfos, err := proposals.AddressProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
 	if err != nil {
@@ -698,6 +865,32 @@ func (api *API) GetCancelVoteValidatorList(addr common.Address, page *big.Int, s
 	if err != nil {
 		return []common.Address{}, err
 	}
+	if page == nil && size == nil {
+		count, err := nodeVotes.CancelVoteValidatorListLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+		if err != nil {
+			return []common.Address{}, err
+		}
+		size = big.NewInt(50)
+		equal := count.Cmp(size)
+		if equal < 1 {
+			page = big.NewInt(1)
+
+		} else {
+			var allVoters []common.Address
+			var res big.Int
+			div := res.Div(count, size)
+			div = res.Add(div, big.NewInt(1))
+			for i := int64(1); i <= div.Int64(); i++ {
+				voters, err := nodeVotes.CancelVoteValidatorList(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
+				if err != nil {
+					return []common.Address{}, err
+				}
+				allVoters = append(allVoters, voters...)
+			}
+			return allVoters, nil
+
+		}
+	}
 	vals, err := nodeVotes.CancelVoteValidatorList(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
 	if err != nil {
 		return []common.Address{}, err
@@ -719,6 +912,32 @@ func (api *API) GetVoteList(addr common.Address, page *big.Int, size *big.Int, n
 	if err != nil {
 		return []systemcontract.VoteInfo{}, err
 	}
+	if page == nil && size == nil {
+		count, err := nodeVotes.VoteListLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+		if err != nil {
+			return []systemcontract.VoteInfo{}, err
+		}
+		size = big.NewInt(50)
+		equal := count.Cmp(size)
+		if equal < 1 {
+			page = big.NewInt(1)
+
+		} else {
+			var allVoteList []systemcontract.VoteInfo
+			var res big.Int
+			div := res.Div(count, size)
+			div = res.Add(div, big.NewInt(1))
+			for i := int64(1); i <= div.Int64(); i++ {
+				voteInfo, err := nodeVotes.VoteList(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
+				if err != nil {
+					return []systemcontract.VoteInfo{}, err
+				}
+				allVoteList = append(allVoteList, voteInfo...)
+			}
+			return allVoteList, nil
+
+		}
+	}
 	voteLists, err := nodeVotes.VoteList(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
 	if err != nil {
 		return []systemcontract.VoteInfo{}, err
@@ -739,6 +958,32 @@ func (api *API) GetRedeemInfo(addr common.Address, page *big.Int, size *big.Int,
 	state, err := api.dpos.stateFn(header.Root)
 	if err != nil {
 		return []systemcontract.RedeemVoterInfo{}, err
+	}
+	if page == nil && size == nil {
+		count, err := nodeVotes.CancelVoteValidatorListLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+		if err != nil {
+			return []systemcontract.RedeemVoterInfo{}, err
+		}
+		size = big.NewInt(50)
+		equal := count.Cmp(size)
+		if equal < 1 {
+			page = big.NewInt(1)
+
+		} else {
+			var allRedeemInfo []systemcontract.RedeemVoterInfo
+			var res big.Int
+			div := res.Div(count, size)
+			div = res.Add(div, big.NewInt(1))
+			for i := int64(1); i <= div.Int64(); i++ {
+				redeemInfo, err := nodeVotes.RedeemInfo(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
+				if err != nil {
+					return []systemcontract.RedeemVoterInfo{}, err
+				}
+				allRedeemInfo = append(allRedeemInfo, redeemInfo...)
+			}
+			return allRedeemInfo, nil
+
+		}
 	}
 	redeemInfos, err := nodeVotes.RedeemInfo(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
 	if err != nil {
