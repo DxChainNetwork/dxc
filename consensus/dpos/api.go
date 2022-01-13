@@ -105,6 +105,50 @@ func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) 
 	return snap.validators(), nil
 }
 
+// GetValidator return the validator of address
+func (api *API) GetValidator(addr common.Address, number *rpc.BlockNumber) (*systemcontract.Validator, error) {
+	validators := systemcontract.NewValidators()
+	var header *types.Header
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	if header == nil {
+		return &systemcontract.Validator{}, errUnknownBlock
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return &systemcontract.Validator{}, err
+	}
+	val, err := validators.GetValidator(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return &systemcontract.Validator{}, err
+	}
+	return val, nil
+}
+
+// GetTotalDeposit return total deposit
+func (api *API) GetTotalDeposit(number *rpc.BlockNumber) (*big.Int, error) {
+	validators := systemcontract.NewValidators()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	deposit, err := validators.TotalDeposit(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	return deposit, nil
+}
+
 // GetCurrentEpochValidators return current epoch validators
 func (api *API) GetCurrentEpochValidators(number *rpc.BlockNumber) ([]common.Address, error) {
 	validators := systemcontract.NewValidators()
@@ -440,6 +484,39 @@ func (api *API) GetAllProposals(page *big.Int, size *big.Int, number *rpc.BlockN
 	return newProposals, nil
 }
 
+// GetProposal return the proposal of id
+func (api *API) GetProposal(id string, number *rpc.BlockNumber) (*ProposalInfo, error) {
+	proposals := systemcontract.NewProposals()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return &ProposalInfo{}, err
+	}
+	proposalInfo, err := proposals.GetProposal(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, id)
+	if err != nil {
+		return &ProposalInfo{}, err
+	}
+	detail := &ProposalInfo{
+		Id:          hexutil.Encode(proposalInfo.Id[0:len(proposalInfo.Id)]),
+		Proposer:    proposalInfo.Proposer,
+		UpdateBlock: proposalInfo.UpdateBlock,
+		PType:       proposalInfo.PType,
+		Guarantee:   proposalInfo.Guarantee,
+		Deposit:     proposalInfo.Deposit,
+		Details:     proposalInfo.Details,
+		InitBlock:   proposalInfo.InitBlock,
+		Rate:        proposalInfo.Rate,
+		Status:      proposalInfo.Status,
+	}
+	return detail, nil
+}
+
 // GetAddressProposals return the address proposals
 func (api *API) GetAddressProposals(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]ProposalInfo, error) {
 	proposals := systemcontract.NewProposals()
@@ -691,6 +768,27 @@ func (api *API) GetEpochInfo(epoch *big.Int, number *rpc.BlockNumber) (*systemco
 		return &systemcontract.EpochInfo{}, err
 	}
 	return epochInfo, nil
+}
+
+// GetSysRewards return the sys reward info
+func (api *API) GetSysRewards(addr common.Address, number *rpc.BlockNumber) (*systemcontract.SysRewards, error) {
+	systemRewards := systemcontract.NewSystemRewards()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return &systemcontract.SysRewards{}, err
+	}
+	rewardInfo, err := systemRewards.GetSysRewards(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return &systemcontract.SysRewards{}, err
+	}
+	return rewardInfo, nil
 }
 
 // GetValRewardEpochs return the address reward epochs

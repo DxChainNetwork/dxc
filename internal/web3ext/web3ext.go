@@ -123,6 +123,18 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'validator',
+			call: 'dpos_getValidator',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'totalDeposit',
+			call: 'dpos_getTotalDeposit',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'currentEpochValidators',
 			call: 'dpos_getCurrentEpochValidators',
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
@@ -201,6 +213,12 @@ web3._extend({
 			params: 3
 		}),
 		new web3._extend.Method({
+			name: 'proposal',
+			call: 'dpos_getProposal',
+			inputFormatter: [null,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
+		}),
+		new web3._extend.Method({
 			name: 'addressProposals',
 			call: 'dpos_getAddressProposals',
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null,web3._extend.formatters.inputBlockNumberFormatter],
@@ -264,6 +282,12 @@ web3._extend({
 			name: 'getEpochInfo',
 			call: 'dpos_getEpochInfo',
 			inputFormatter: [null,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'getSysRewards',
+			call: 'dpos_getSysRewards',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
 			params: 2
 		}),
 		new web3._extend.Method({
