@@ -337,3 +337,34 @@ func (pd *PublicDposTxAPI) ValidatorRedeem(args *TransactionArgs) (common.Hash, 
 
 	return txHash, nil
 }
+
+// EarnValReward earnValReward function of SystemRewards contract
+func (pd *PublicDposTxAPI) EarnValReward(args *TransactionArgs) (common.Hash, error) {
+	ctx := context.Background()
+	args.To = &systemcontract.SystemRewardsContractAddr
+
+	if err := pd.prepareAccount(args); err != nil {
+		return common.Hash{}, err
+	}
+
+	pd.nonceLock.LockAddr(*args.From)
+	defer pd.nonceLock.UnlockAddr(*args.From)
+
+	log.Info("earnValReward", "from", args.From)
+
+	method := "earnValReward"
+	abiMap := systemcontract.GetInteractiveABI()
+
+	data, err := abiMap[systemcontract.SystemRewardsContractName].Pack(method)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	args.Data = (*hexutil.Bytes)(&data)
+
+	txHash, err := pd.sendDposTx(ctx, args)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
