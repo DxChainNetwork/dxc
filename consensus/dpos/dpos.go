@@ -152,8 +152,6 @@ var (
 
 	// errInvalidCoinbase is returned if the coinbase isn't the validator of the block.
 	errInvalidCoinbase = errors.New("invalid coinbase")
-
-	errInvalidSysGovCount = errors.New("invalid system governance tx count")
 )
 
 var (
@@ -569,11 +567,6 @@ func (d *Dpos) Prepare(chain consensus.ChainHeaderReader, header *types.Header) 
 	// Set the correct difficulty
 	header.Difficulty = calcDifficulty(snap, d.validator)
 
-	// Bail out if we're unauthorized to sign a block
-	if _, authorized := snap.Validators[header.Coinbase]; !authorized {
-		return errUnauthorizedValidator
-	}
-
 	// Ensure the extra data has all its components
 	if len(header.Extra) < extraVanity {
 		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(header.Extra))...)
@@ -746,6 +739,16 @@ func (d *Dpos) trySendBlockReward(chain consensus.ChainHeaderReader, header *typ
 		return nil
 	}
 
+	number := header.Number.Uint64()
+	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
+	if err != nil {
+		return err
+	}
+	// Bail out if we're unauthorized to sign a block
+	if _, authorized := snap.Validators[header.Coinbase]; !authorized {
+		return nil
+	}
+
 	s := systemcontract.NewSystemRewards()
 	// get Block Reward
 	epochInfo, err := s.GetEpochInfo(state, header, newChainContext(chain, d), d.chainConfig, new(big.Int).Div(header.Number, new(big.Int).SetUint64(d.config.Epoch)))
@@ -786,6 +789,11 @@ func (d *Dpos) tryPunishValidator(chain consensus.ChainHeaderReader, header *typ
 	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return false, err
+	}
+
+	// Bail out if we're unauthorized to sign a block
+	if _, authorized := snap.Validators[header.Coinbase]; !authorized {
+		return false, nil
 	}
 	validators := snap.validators()
 	outTurnValidator := validators[number%uint64(len(validators))]
@@ -838,6 +846,15 @@ func (d *Dpos) punishValidator(validator common.Address, chain consensus.ChainHe
 // doSomethingAtEpoch tryElect new epoch validators
 func (d *Dpos) doSomethingAtEpoch(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
 	if header.Coinbase == common.BigToAddress(common.Big0) {
+		return nil
+	}
+	number := header.Number.Uint64()
+	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
+	if err != nil {
+		return err
+	}
+	// Bail out if we're unauthorized to sign a block
+	if _, authorized := snap.Validators[header.Coinbase]; !authorized {
 		return nil
 	}
 

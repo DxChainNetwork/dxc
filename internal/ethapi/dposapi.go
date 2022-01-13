@@ -100,7 +100,7 @@ func (pd *PublicDposTxAPI) InitProposal(pType uint8, rate uint8, details string,
 	return txHash, nil
 }
 
-// UpdateProposal updateProposal function of Proposal contract
+// UpdateProposal updateProposal function of Proposals contract
 func (pd *PublicDposTxAPI) UpdateProposal(id string, rate uint8, deposit *big.Int, details string, args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
 	args.To = &systemcontract.ProposalsContractAddr
@@ -138,7 +138,7 @@ func (pd *PublicDposTxAPI) UpdateProposal(id string, rate uint8, deposit *big.In
 	return txHash, nil
 }
 
-// CancelProposal cancelProposal function of Proposal contract
+// CancelProposal cancelProposal function of Proposals contract
 func (pd *PublicDposTxAPI) CancelProposal(id string, args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
 	args.To = &systemcontract.ProposalsContractAddr
@@ -176,7 +176,7 @@ func (pd *PublicDposTxAPI) CancelProposal(id string, args *TransactionArgs) (com
 	return txHash, nil
 }
 
-// Guarantee guarantee function of Proposal contract
+// Guarantee guarantee function of Proposals contract
 func (pd *PublicDposTxAPI) Guarantee(id string, args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
 	args.To = &systemcontract.ProposalsContractAddr
@@ -201,6 +201,130 @@ func (pd *PublicDposTxAPI) Guarantee(id string, args *TransactionArgs) (common.H
 	copy(idByte4[:], idBytes[:4])
 
 	data, err := abiMap[systemcontract.ProposalsContractName].Pack(method, idByte4)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	args.Data = (*hexutil.Bytes)(&data)
+
+	txHash, err := pd.sendDposTx(ctx, args)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
+
+// UpdateValidatorDeposit updateValidatorDeposit function of Validators contract
+func (pd *PublicDposTxAPI) UpdateValidatorDeposit(deposit *big.Int, args *TransactionArgs) (common.Hash, error) {
+	ctx := context.Background()
+	args.To = &systemcontract.ValidatorsContractAddr
+
+	if err := pd.prepareAccount(args); err != nil {
+		return common.Hash{}, err
+	}
+
+	pd.nonceLock.LockAddr(*args.From)
+	defer pd.nonceLock.UnlockAddr(*args.From)
+
+	log.Info("updateValidatorDeposit", "from", args.From, "deposit", deposit)
+
+	method := "updateValidatorDeposit"
+	abiMap := systemcontract.GetInteractiveABI()
+
+	data, err := abiMap[systemcontract.ValidatorsContractName].Pack(method, deposit)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	args.Data = (*hexutil.Bytes)(&data)
+
+	txHash, err := pd.sendDposTx(ctx, args)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
+
+// UpdateValidatorRate updateValidatorRate function of Validators contract
+func (pd *PublicDposTxAPI) UpdateValidatorRate(rate uint8, args *TransactionArgs) (common.Hash, error) {
+	ctx := context.Background()
+	args.To = &systemcontract.ValidatorsContractAddr
+
+	if err := pd.prepareAccount(args); err != nil {
+		return common.Hash{}, err
+	}
+
+	pd.nonceLock.LockAddr(*args.From)
+	defer pd.nonceLock.UnlockAddr(*args.From)
+
+	log.Info("updateValidatorRate", "from", args.From, "rate", rate)
+
+	method := "updateValidatorRate"
+	abiMap := systemcontract.GetInteractiveABI()
+
+	data, err := abiMap[systemcontract.ValidatorsContractName].Pack(method, rate)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	args.Data = (*hexutil.Bytes)(&data)
+
+	txHash, err := pd.sendDposTx(ctx, args)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
+
+// ValidatorUnstake unstake function of Validators contract
+func (pd *PublicDposTxAPI) ValidatorUnstake(args *TransactionArgs) (common.Hash, error) {
+	ctx := context.Background()
+	args.To = &systemcontract.ValidatorsContractAddr
+
+	if err := pd.prepareAccount(args); err != nil {
+		return common.Hash{}, err
+	}
+
+	pd.nonceLock.LockAddr(*args.From)
+	defer pd.nonceLock.UnlockAddr(*args.From)
+
+	log.Info("validatorUnstake", "from", args.From)
+
+	method := "unstake"
+	abiMap := systemcontract.GetInteractiveABI()
+
+	data, err := abiMap[systemcontract.ValidatorsContractName].Pack(method)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	args.Data = (*hexutil.Bytes)(&data)
+
+	txHash, err := pd.sendDposTx(ctx, args)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
+
+// ValidatorRedeem redeem function of Validators contract
+func (pd *PublicDposTxAPI) ValidatorRedeem(args *TransactionArgs) (common.Hash, error) {
+	ctx := context.Background()
+	args.To = &systemcontract.ValidatorsContractAddr
+
+	if err := pd.prepareAccount(args); err != nil {
+		return common.Hash{}, err
+	}
+
+	pd.nonceLock.LockAddr(*args.From)
+	defer pd.nonceLock.UnlockAddr(*args.From)
+
+	log.Info("ValidatorRedeem", "from", args.From)
+
+	method := "redeem"
+	abiMap := systemcontract.GetInteractiveABI()
+
+	data, err := abiMap[systemcontract.ValidatorsContractName].Pack(method)
 	if err != nil {
 		return common.Hash{}, err
 	}
