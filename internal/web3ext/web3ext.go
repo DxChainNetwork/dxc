@@ -285,7 +285,7 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'getSysRewards',
+			name: 'getValRewardIndex',
 			call: 'dpos_getSysRewards',
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
 			params: 2
