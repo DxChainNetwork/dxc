@@ -101,7 +101,7 @@ func (pd *PublicDposTxAPI) InitProposal(pType uint8, rate uint8, details string,
 }
 
 // UpdateProposal updateProposal function of Proposals contract
-func (pd *PublicDposTxAPI) UpdateProposal(id string, rate uint8, deposit *big.Int, details string, args *TransactionArgs) (common.Hash, error) {
+func (pd *PublicDposTxAPI) UpdateProposal(id string, rate uint8, deposit *hexutil.Big, details string, args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
 	args.To = &systemcontract.ProposalsContractAddr
 
@@ -124,7 +124,7 @@ func (pd *PublicDposTxAPI) UpdateProposal(id string, rate uint8, deposit *big.In
 	var idByte4 [4]byte
 	copy(idByte4[:], idBytes[:4])
 
-	data, err := abiMap[systemcontract.ProposalsContractName].Pack(method, idByte4, rate, deposit, details)
+	data, err := abiMap[systemcontract.ProposalsContractName].Pack(method, idByte4, rate, (*big.Int)(deposit), details)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -215,7 +215,7 @@ func (pd *PublicDposTxAPI) Guarantee(id string, args *TransactionArgs) (common.H
 }
 
 // UpdateValidatorDeposit updateValidatorDeposit function of Validators contract
-func (pd *PublicDposTxAPI) UpdateValidatorDeposit(deposit *big.Int, args *TransactionArgs) (common.Hash, error) {
+func (pd *PublicDposTxAPI) UpdateValidatorDeposit(deposit *hexutil.Big, args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
 	args.To = &systemcontract.ValidatorsContractAddr
 
@@ -231,7 +231,7 @@ func (pd *PublicDposTxAPI) UpdateValidatorDeposit(deposit *big.Int, args *Transa
 	method := "updateValidatorDeposit"
 	abiMap := systemcontract.GetInteractiveABI()
 
-	data, err := abiMap[systemcontract.ValidatorsContractName].Pack(method, deposit)
+	data, err := abiMap[systemcontract.ValidatorsContractName].Pack(method, (*big.Int)(deposit))
 	if err != nil {
 		return common.Hash{}, err
 	}

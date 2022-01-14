@@ -326,7 +326,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'updateProposal',
 			call: 'dpos_updateProposal',
-			inputFormatter: [null,null,null,null,function(options) {
+			inputFormatter: [null,null,web3.fromDecimal, null, function(options) {
 				options = options == undefined? {} : options
 				return web3._extend.formatters.inputCallFormatter(options)
 			}],
@@ -353,7 +353,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'updateValidatorDeposit',
 			call: 'dpos_updateValidatorDeposit',
-			inputFormatter: [null,function(options) {
+			inputFormatter: [web3.fromDecimal,function(options) {
 				options = options == undefined? {} : options
 				return web3._extend.formatters.inputCallFormatter(options)
 			}],
