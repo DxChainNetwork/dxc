@@ -23,7 +23,6 @@ import (
 	"github.com/DxChainNetwork/dxc/consensus"
 	"github.com/DxChainNetwork/dxc/consensus/dpos/systemcontract"
 	"github.com/DxChainNetwork/dxc/core/types"
-	"github.com/DxChainNetwork/dxc/log"
 	"github.com/DxChainNetwork/dxc/rpc"
 	"math/big"
 )
@@ -260,7 +259,6 @@ func (api *API) GetVoters(addr common.Address, page *big.Int, size *big.Int, num
 	}
 	if page == nil && size == nil {
 		count, err := validators.ValidatorToVotersLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
-		log.Info("hhhhhhhhhhh", "count", count)
 		if err != nil {
 			return []common.Address{}, err
 		}
