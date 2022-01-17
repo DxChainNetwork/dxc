@@ -257,6 +257,31 @@ func (api *API) GetUpdateRateValidators(page *big.Int, size *big.Int, number *rp
 	if err != nil {
 		return []systemcontract.ValUpdateRate{}, err
 	}
+	if page == nil && size == nil {
+		count, err := validators.UpdateRateValidatorsLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+		if err != nil {
+			return []systemcontract.ValUpdateRate{}, err
+		}
+		size = big.NewInt(50)
+		equal := count.Cmp(size)
+		if equal < 1 {
+			page = big.NewInt(1)
+		} else {
+			var allInfos []systemcontract.ValUpdateRate
+			var res big.Int
+			div := res.Div(count, size)
+			div = res.Add(div, big.NewInt(1))
+			for i := int64(1); i <= div.Int64(); i++ {
+				vals, err := validators.UpdateRateValidators(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, big.NewInt(i), size)
+				if err != nil {
+					return []systemcontract.ValUpdateRate{}, err
+				}
+				allInfos = append(allInfos, vals...)
+			}
+			return allInfos, nil
+
+		}
+	}
 	vals, err := validators.UpdateRateValidators(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
 	if err != nil {
 		return []systemcontract.ValUpdateRate{}, err
