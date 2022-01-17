@@ -241,6 +241,50 @@ func (api *API) GetCancelQueueValidators(number *rpc.BlockNumber) ([]common.Addr
 	return cancelingValidators, nil
 }
 
+// GetUpdateRateValidators return all update rate  validators info
+func (api *API) GetUpdateRateValidators(page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]systemcontract.ValUpdateRate, error) {
+	validators := systemcontract.NewValidators()
+	var header *types.Header
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	if header == nil {
+		return []systemcontract.ValUpdateRate{}, errUnknownBlock
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return []systemcontract.ValUpdateRate{}, err
+	}
+	vals, err := validators.UpdateRateValidators(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
+	if err != nil {
+		return []systemcontract.ValUpdateRate{}, err
+	}
+	return vals, nil
+}
+
+// GetValidatorUpdateRate return total deposit
+func (api *API) GetValidatorUpdateRate(addr common.Address, number *rpc.BlockNumber) (uint8, error) {
+	validators := systemcontract.NewValidators()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return uint8(0), err
+	}
+	rate, err := validators.ValidatorUpdateRate(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return uint8(0), err
+	}
+	return rate, nil
+}
+
 // GetVoters return the address voter
 func (api *API) GetVoters(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]common.Address, error) {
 	validators := systemcontract.NewValidators()
@@ -346,6 +390,27 @@ func (api *API) GetCancelQueueValidatorsLength(number *rpc.BlockNumber) (*big.In
 		return big.NewInt(0), err
 	}
 	count, err := validators.CancelQueueValidatorsLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	return count, nil
+}
+
+// GetUpdateRateValidatorsLength return update rate validators length
+func (api *API) GetUpdateRateValidatorsLength(number *rpc.BlockNumber) (*big.Int, error) {
+	validators := systemcontract.NewValidators()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	count, err := validators.UpdateRateValidatorsLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
 	if err != nil {
 		return big.NewInt(0), err
 	}

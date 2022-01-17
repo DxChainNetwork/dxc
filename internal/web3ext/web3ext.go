@@ -183,6 +183,24 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'validatorUpdateRate',
+			call: 'dpos_getValidatorUpdateRate',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'updateRateValidators',
+			call: 'dpos_getUpdateRateValidators',
+			inputFormatter: [null,null,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'updateRateValidatorsLength',
+			call: 'dpos_getUpdateRateValidatorsLength',
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'validatorVotersLength',
 			call: 'dpos_getValidatorToVotersLength',
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
