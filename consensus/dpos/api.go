@@ -289,7 +289,7 @@ func (api *API) GetUpdateRateValidators(page *big.Int, size *big.Int, number *rp
 	return vals, nil
 }
 
-// GetValidatorUpdateRate return total deposit
+// GetValidatorUpdateRate return the address update rate info
 func (api *API) GetValidatorUpdateRate(addr common.Address, number *rpc.BlockNumber) (uint8, error) {
 	validators := systemcontract.NewValidators()
 	var header *types.Header
