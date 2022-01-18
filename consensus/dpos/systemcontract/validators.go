@@ -34,6 +34,12 @@ type Validator struct {
 	RateSettLockingEndBlock *big.Int
 }
 
+type ValUpdateRate struct {
+	Validator  common.Address
+	PreRate    uint8
+	UpdateRate uint8
+}
+
 func (v *Validators) GetCurrentEpochValidators(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) ([]common.Address, error) {
 	method := "getCurEpochValidators"
 	data, err := v.abi.Pack(method)
@@ -385,4 +391,87 @@ func (v *Validators) TotalDeposit(statedb *state.StateDB, header *types.Header, 
 	}
 	return deposit, nil
 
+}
+
+// UpdateRateValidators get the update rate validator info
+func (v *Validators) UpdateRateValidators(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, page *big.Int, size *big.Int) ([]ValUpdateRate, error) {
+	method := "updateRateValidators"
+	data, err := v.abi.Pack(method, page, size)
+	if err != nil {
+		log.Error("Validators Pack error", "method", method, "error", err)
+		return []ValUpdateRate{}, err
+	}
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("Validators contract execute error", "method", method, "error", err)
+		return []ValUpdateRate{}, err
+	}
+
+	var valUpdateRate []ValUpdateRate
+	err = v.abi.UnpackIntoInterface(&valUpdateRate, method, result)
+	if err != nil {
+		log.Error("Validators contract Unpack error", "method", method, "error", err, "result", result)
+		return []ValUpdateRate{}, err
+	}
+
+	return valUpdateRate, nil
+}
+
+// UpdateRateValidatorsLength function UpdateRateValidatorsLength
+func (v *Validators) UpdateRateValidatorsLength(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) (*big.Int, error) {
+	method := "updateRateValidatorsLength"
+	data, err := v.abi.Pack(method)
+
+	if err != nil {
+		log.Error("Validators Pack error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("Validators contract execute error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+
+	ret, err := v.abi.Unpack(method, result)
+	if err != nil {
+		log.Error("Validators contract Unpack error", "method", method, "error", err, "result", result)
+		return big.NewInt(0), err
+	}
+	count, ok := ret[0].(*big.Int)
+	if !ok {
+		log.Error("Validators contract format result error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+	return count, nil
+
+}
+
+// ValidatorUpdateRate get the update rate validator info
+func (v *Validators) ValidatorUpdateRate(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address) (uint8, error) {
+	method := "validatorUpdateRate"
+	data, err := v.abi.Pack(method, addr)
+	if err != nil {
+		log.Error("Validators Pack error", "method", method, "error", err)
+		return uint8(0), err
+	}
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("Validators contract execute error", "method", method, "error", err)
+		return uint8(0), err
+	}
+	ret, err := v.abi.Unpack(method, result)
+	if err != nil {
+		log.Error("Validators contract Unpack error", "method", method, "error", err, "result", result)
+		return uint8(0), err
+	}
+	rate, ok := ret[0].(uint8)
+	if !ok {
+		log.Error("Validators contract format result error", "method", method, "error", err)
+		return uint8(0), err
+	}
+	return rate, nil
 }
