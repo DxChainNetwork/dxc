@@ -215,3 +215,32 @@ func (s *SystemRewards) GetSysRewards(statedb *state.StateDB, header *types.Head
 
 	return rewardInfo, nil
 }
+
+// PunishInfo punishInfo function of systemRewards contract
+func (s *SystemRewards) PunishInfo(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, epoch *big.Int) (*big.Int, error) {
+	method := "punishInfo"
+
+	data, err := s.abi.Pack(method, addr, epoch)
+	if err != nil {
+		log.Error("can't pack SystemRewards contract method", "method", method)
+		return big.NewInt(0), err
+	}
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &s.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("SystemRewards contract execute error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+	ret, err := s.abi.Unpack(method, result)
+	if err != nil {
+		log.Error("SystemRewards contract Unpack error", "method", method, "error", err, "result", result)
+		return big.NewInt(0), err
+	}
+	punishCount, ok := ret[0].(*big.Int)
+	if !ok {
+		log.Error("SystemRewards contract format result error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+
+	return punishCount, nil
+}

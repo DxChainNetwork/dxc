@@ -598,6 +598,8 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 		}
 	}
 
+	header.Extra = header.Extra[:extraVanity]
+
 	if header.Difficulty.Cmp(diffInTurn) != 0 {
 		kickout, err := d.tryPunishValidator(chain, header, state)
 		if err != nil {
@@ -684,6 +686,7 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 			panic(err)
 		}
 	}
+	header.Extra = header.Extra[:extraVanity]
 	// punish validator if necessary
 	if header.Difficulty.Cmp(diffInTurn) != 0 {
 		kickout, err := d.tryPunishValidator(chain, header, state)
@@ -702,7 +705,6 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 			}
 		}
 	}
-	header.Extra = header.Extra[:extraVanity]
 	// do epoch thing at the end, because it will update active validators
 	if header.Number.Uint64()%d.config.Epoch == 0 {
 		log.Info("[FinalizeAndAssemble]: update epoch", "update", true)
@@ -715,6 +717,7 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 			panic(err)
 		}
 		log.Info("update epoch info", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
+		header.Extra = header.Extra[:extraVanity]
 		for _, validator := range newEpochValidators {
 			header.Extra = append(header.Extra, validator.Bytes()...)
 		}
@@ -805,10 +808,9 @@ func (d *Dpos) tryPunishValidator(chain consensus.ChainHeaderReader, header *typ
 			break
 		}
 	}
+	log.Info("tryPunishValidator", "header", number, "validators", validators, "outTurnValidator", outTurnValidator)
 	if !signedRecently {
-		if kickout, err := d.punishValidator(outTurnValidator, chain, header, state); err != nil {
-			return kickout, err
-		}
+		return d.punishValidator(outTurnValidator, chain, header, state)
 	}
 
 	return false, nil
@@ -839,6 +841,8 @@ func (d *Dpos) punishValidator(validator common.Address, chain consensus.ChainHe
 	if !ok {
 		return false, errors.New("punish result format error")
 	}
+
+	log.Info("punish", "header", header.Number, "validator", validator, "kickout", kickout)
 
 	return kickout, nil
 }
