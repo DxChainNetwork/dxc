@@ -315,6 +315,12 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
+			name: 'punishInfo',
+			call: 'dpos_punishInfo',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 3
+		}),
+		new web3._extend.Method({
 			name: 'getValRewardInfoByEpoch',
 			call: 'dpos_getValRewardInfoByEpoch',
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,web3._extend.formatters.inputBlockNumberFormatter],

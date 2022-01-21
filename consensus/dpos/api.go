@@ -1214,6 +1214,28 @@ func (api *API) GetPendingVoterReward(addr common.Address, number *rpc.BlockNumb
 	return result, nil
 }
 
+// PunishInfo punishInfo function of systemRewards contract
+func (api *API) PunishInfo(addr common.Address, epoch *big.Int, number *rpc.BlockNumber) (*big.Int, error) {
+	systemRewards := systemcontract.NewSystemRewards()
+	var header *types.Header
+	header = api.chain.CurrentHeader()
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	state, err := api.dpos.stateFn(header.Root)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	punishCount, err := systemRewards.PunishInfo(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, epoch)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+
+	return punishCount, nil
+}
+
 type status struct {
 	InturnPercent float64                `json:"inturnPercent"`
 	SigningStatus map[common.Address]int `json:"sealerActivity"`
