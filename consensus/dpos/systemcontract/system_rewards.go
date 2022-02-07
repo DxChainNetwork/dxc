@@ -138,7 +138,6 @@ func (s *SystemRewards) PendingValReward(statedb *state.StateDB, header *types.H
 		log.Error("SystemRewards contract execute error", "method", method, "error", err)
 		return big.NewInt(0), big.NewInt(0), err
 	}
-	log.Info("SystemRewards contract format result", "result", result)
 	ret, err := s.abi.Unpack(method, result)
 	if err != nil {
 		log.Error("SystemRewards contract Unpack error", "method", method, "error", err, "result", result)
