@@ -759,14 +759,12 @@ func (d *Dpos) trySendBlockReward(chain consensus.ChainHeaderReader, header *typ
 		log.Error("GetEpochInfo error ", "error", err)
 	}
 
-	log.Info("distributeBlockReward", "BlockReward", epochInfo.BlockReward, "FeeRecoder", state.GetBalance(consensus.FeeRecoder))
 	totalReward := new(big.Int).Add(epochInfo.BlockReward, state.GetBalance(consensus.FeeRecoder))
 	rewardToFoundation := new(big.Int).Div(new(big.Int).Mul(totalReward, big.NewInt(5)), big.NewInt(100))
 	rewardToMiner := new(big.Int).Sub(totalReward, rewardToFoundation)
 
 	state.AddBalance(foundationAddress, rewardToFoundation)
 	state.AddBalance(systemcontract.SystemRewardsContractAddr, rewardToMiner)
-	log.Info("distributeBlockReward", "foundation", state.GetBalance(foundationAddress), "sysAddr", state.GetBalance(systemcontract.SystemRewardsContractAddr))
 
 	// reset tx fee recoder balance
 	state.SetBalance(consensus.FeeRecoder, common.Big0)
