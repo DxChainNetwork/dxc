@@ -36,8 +36,8 @@ type ProposalInfo struct {
 // NewProposals return Proposals contract instance
 func NewProposals() *Proposals {
 	return &Proposals{
-		abi:          abiMap[ProposalsContractName],
-		contractAddr: ProposalsContractAddr,
+		abi:          abiMap[ValidatorProposalsContractName],
+		contractAddr: ValidatorProposalsContractAddr,
 	}
 }
 

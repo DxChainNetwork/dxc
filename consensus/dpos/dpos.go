@@ -72,7 +72,7 @@ const (
 // Dpos delegated proof-of-stake protocol constants.
 var (
 	// TODO: update epochLength
-	epochLength = uint64(20) // Default number of blocks after which to checkpoint and reset the pending votes
+	epochLength = uint64(40) // Default number of blocks after which to checkpoint and reset the pending votes
 
 	extraVanity = 32                     // Fixed number of extra-data prefix bytes reserved for validator vanity
 	extraSeal   = crypto.SignatureLength // Fixed number of extra-data suffix bytes reserved for validator seal
@@ -151,7 +151,9 @@ var (
 	errInvalidValidatorsLength = errors.New("invalid validators length")
 
 	// errInvalidCoinbase is returned if the coinbase isn't the validator of the block.
-	errInvalidCoinbase = errors.New("invalid coinbase")
+	errInvalidCoinbase = errors.New("invalid coin base")
+
+	errInvalidSysGovCount = errors.New("invalid system governance tx count")
 )
 
 var (
@@ -239,8 +241,6 @@ func New(chainConfig *params.ChainConfig, db ethdb.Database) *Dpos {
 	blacklists, _ := lru.New(inmemoryBlacklist)
 	rules, _ := lru.New(inmemoryBlacklist)
 
-	abi := systemcontract.GetInteractiveABI()
-
 	return &Dpos{
 		chainConfig:     chainConfig,
 		config:          &conf,
@@ -250,7 +250,7 @@ func New(chainConfig *params.ChainConfig, db ethdb.Database) *Dpos {
 		blacklists:      blacklists,
 		eventCheckRules: rules,
 		proposals:       make(map[common.Address]bool),
-		abi:             abi,
+		abi:             systemcontract.GetInteractiveABI(),
 		signer:          types.LatestSignerForChainID(chainConfig.ChainID),
 	}
 }
@@ -318,15 +318,14 @@ func (d *Dpos) verifyHeader(chain consensus.ChainHeaderReader, header *types.Hea
 	if len(header.Extra) < extraVanity+extraSeal {
 		return errMissingSignature
 	}
-
 	// check extra data
 	isEpoch := number%d.config.Epoch == 0
+
 	// Ensure that the extra-data contains a validator list on checkpoint, but none otherwise
 	validatorsBytes := len(header.Extra) - extraVanity - extraSeal
-	// TODO check
-	//if !isEpoch && validatorsBytes != 0 {
-	//	return errExtraValidators
-	//}
+	if !isEpoch && validatorsBytes != 0 {
+		return errExtraValidators
+	}
 	// Ensure that the validator bytes length is valid
 	if isEpoch && validatorsBytes%common.AddressLength != 0 {
 		return errExtraValidators
@@ -572,14 +571,33 @@ func (d *Dpos) Prepare(chain consensus.ChainHeaderReader, header *types.Header) 
 		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(header.Extra))...)
 	}
 	header.Extra = header.Extra[:extraVanity]
-	// Mix digest is reserved for now, set to empty
-	header.MixDigest = common.Hash{}
 
-	// Ensure the timestamp has the correct delay
 	parent := chain.GetHeader(header.ParentHash, number-1)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
+
+	statedb, err := d.stateFn(parent.Root)
+	if err != nil {
+		return err
+	}
+
+	if number%d.config.Epoch == 0 {
+		newValidators, err := d.getCurEpochValidators(chain, header, statedb)
+		if err != nil {
+			return err
+		}
+
+		for _, validator := range newValidators {
+			header.Extra = append(header.Extra, validator.Bytes()...)
+		}
+	}
+	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
+
+	// Mix digest is reserved for now, set to empty
+	header.MixDigest = common.Hash{}
+
+	// Ensure the timestamp has the correct delay
 	header.Time = parent.Time + d.config.Period
 	if header.Time < uint64(time.Now().Unix()) {
 		header.Time = uint64(time.Now().Unix())
@@ -598,23 +616,9 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 		}
 	}
 
-	header.Extra = header.Extra[:extraVanity]
-
 	if header.Difficulty.Cmp(diffInTurn) != 0 {
-		kickout, err := d.tryPunishValidator(chain, header, state)
-		if err != nil {
-			panic(err)
-		}
-		if kickout {
-			newValidators, err := d.getCurEpochValidators(chain, header, state)
-			if err != nil {
-				panic(err)
-			}
-			log.Info("kickout validator", "header", header.Number.Uint64(), "newValidators", newValidators)
-
-			for _, validator := range newValidators {
-				header.Extra = append(header.Extra, validator.Bytes()...)
-			}
+		if err := d.tryPunishValidator(chain, header, state); err != nil {
+			return err
 		}
 	}
 
@@ -628,24 +632,23 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 		receipts = &rs
 	}
 
+	// deposit block reward
+	if err := d.trySendBlockReward(chain, header, state); err != nil {
+		return err
+	}
+
 	// do epoch thing at the end, because it will update active validators
 	if header.Number.Uint64()%d.config.Epoch == 0 {
-		log.Info("[FinalizeAndAssemble]: update epoch", "update", true)
-		if err := d.doSomethingAtEpoch(chain, header, state); err != nil {
-			panic(err)
-		}
+		//log.Info("[FinalizeAndAssemble]: update epoch", "update", true)
+		//if err := d.doSomethingAtEpoch(chain, header, state); err != nil {
+		//	return err
+		//}
 
 		newEpochValidators, err := d.getCurEpochValidators(chain, header, state)
 		if err != nil {
-			panic(err)
+			return err
 		}
-		log.Info("update epoch", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
-		header.Extra = header.Extra[:extraVanity]
-		for _, validator := range newEpochValidators {
-			header.Extra = append(header.Extra, validator.Bytes()...)
-		}
-
-		header.Extra = append(header.Extra, make([]byte, extraSeal)...)
+		log.Info("New Epoch", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
 
 		validatorsBytes := make([]byte, len(newEpochValidators)*common.AddressLength)
 		for i, validator := range newEpochValidators {
@@ -656,13 +659,44 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 		if !bytes.Equal(header.Extra[extraVanity:extraSuffix], validatorsBytes) {
 			return errInvalidExtraValidators
 		}
-	} else {
-		header.Extra = append(header.Extra, make([]byte, extraSeal)...)
 	}
 
-	// deposit block reward
-	if err := d.trySendBlockReward(chain, header, state); err != nil {
-		return err
+	//handle system governance Proposal
+	if chain.Config().IsRedCoast(header.Number) {
+		proposalCount, err := d.getPassedProposalCount(chain, header, state)
+		if err != nil {
+			return err
+		}
+		if proposalCount != uint32(len(systemTxs)) {
+			return errInvalidSysGovCount
+		}
+		// Due to the logics of the finish operation of contract `governance`, when finishing a proposal which
+		// is not the last passed proposal, it will change the sequence. So in here we must first executes all
+		// passed proposals, and then finish then all.
+		pIds := make([]*big.Int, 0, proposalCount)
+		for i := uint32(0); i < proposalCount; i++ {
+			prop, err := d.getPassedProposalByIndex(chain, header, state, i)
+			if err != nil {
+				return err
+			}
+			// execute the system governance Proposal
+			tx := systemTxs[int(i)]
+			receipt, err := d.replayProposal(chain, header, state, prop, len(*txs), tx)
+			if err != nil {
+				return err
+			}
+			*txs = append(*txs, tx)
+			*receipts = append(*receipts, receipt)
+			// set
+			pIds = append(pIds, prop.Id)
+		}
+		// Finish all proposal
+		for i := uint32(0); i < proposalCount; i++ {
+			err = d.finishProposalById(chain, header, state, pIds[i])
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
@@ -686,47 +720,72 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 			panic(err)
 		}
 	}
-	header.Extra = header.Extra[:extraVanity]
+
 	// punish validator if necessary
 	if header.Difficulty.Cmp(diffInTurn) != 0 {
-		kickout, err := d.tryPunishValidator(chain, header, state)
+		err := d.tryPunishValidator(chain, header, state)
 		if err != nil {
 			panic(err)
 		}
-		if kickout {
-			newValidators, err := d.getCurEpochValidators(chain, header, state)
-			if err != nil {
-				panic(err)
-			}
-			log.Info("kickout validator", "header", header.Number.Uint64(), "newValidators", newValidators)
-
-			for _, validator := range newValidators {
-				header.Extra = append(header.Extra, validator.Bytes()...)
-			}
-		}
 	}
-	// do epoch thing at the end, because it will update active validators
+
+	// deposit block reward
+	if err := d.trySendBlockReward(chain, header, state); err != nil {
+		panic(err)
+	}
+
+	// do  something at the epoch end
 	if header.Number.Uint64()%d.config.Epoch == 0 {
-		log.Info("[FinalizeAndAssemble]: update epoch", "update", true)
-		if err := d.doSomethingAtEpoch(chain, header, state); err != nil {
-			panic(err)
-		}
+		//log.Info("[FinalizeAndAssemble]: update epoch", "update", true)
+		//if err := d.doSomethingAtEpoch(chain, header, state); err != nil {
+		//	panic(err)
+		//}
 
 		newEpochValidators, err := d.getCurEpochValidators(chain, header, state)
 		if err != nil {
 			panic(err)
 		}
-		log.Info("update epoch info", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
-		header.Extra = header.Extra[:extraVanity]
-		for _, validator := range newEpochValidators {
-			header.Extra = append(header.Extra, validator.Bytes()...)
-		}
+		log.Info("New Epoch", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
 	}
-	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
 
-	// deposit block reward
-	if err := d.trySendBlockReward(chain, header, state); err != nil {
-		panic(err)
+	//handle system governance Proposal
+	//
+	// Note:
+	// Even if the miner is not `running`, it's still working,
+	// the 'miner.worker' will try to FinalizeAndAssemble a block,
+	// in this case, the signTxFn is not set. A `non-miner node` can't execute system governance proposal.
+	if d.signTxFn != nil && chain.Config().IsRedCoast(header.Number) {
+		proposalCount, err := d.getPassedProposalCount(chain, header, state)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// Due to the logics of the finish operation of contract `governance`, when finishing a proposal which
+		// is not the last passed proposal, it will change the sequence. So in here we must first executes all
+		// passed proposals, and then finish then all.
+		pIds := make([]*big.Int, 0, proposalCount)
+		for i := uint32(0); i < proposalCount; i++ {
+			prop, err := d.getPassedProposalByIndex(chain, header, state, i)
+			if err != nil {
+				return nil, nil, err
+			}
+			// execute the system governance Proposal
+			tx, receipt, err := d.executeProposal(chain, header, state, prop, len(txs))
+			if err != nil {
+				return nil, nil, err
+			}
+			txs = append(txs, tx)
+			receipts = append(receipts, receipt)
+			// set
+			pIds = append(pIds, prop.Id)
+		}
+		// Finish all proposal
+		for i := uint32(0); i < proposalCount; i++ {
+			err = d.finishProposalById(chain, header, state, pIds[i])
+			if err != nil {
+				return nil, nil, err
+			}
+		}
 	}
 
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
@@ -747,16 +806,21 @@ func (d *Dpos) trySendBlockReward(chain consensus.ChainHeaderReader, header *typ
 	if err != nil {
 		return err
 	}
+
 	// Bail out if we're unauthorized to sign a block
 	if _, authorized := snap.Validators[header.Coinbase]; !authorized {
+		log.Warn("trySendBlockReward authorized false!!!", "header.coinbase", header.Coinbase)
 		return nil
 	}
 
+	blockRewardEpoch := new(big.Int).Div(header.Number, new(big.Int).SetUint64(d.config.Epoch))
+
 	s := systemcontract.NewSystemRewards()
 	// get Block Reward
-	epochInfo, err := s.GetEpochInfo(state, header, newChainContext(chain, d), d.chainConfig, new(big.Int).Div(header.Number, new(big.Int).SetUint64(d.config.Epoch)))
+	epochInfo, err := s.GetEpochInfo(state, header, newChainContext(chain, d), d.chainConfig, blockRewardEpoch)
 	if err != nil {
 		log.Error("GetEpochInfo error ", "error", err)
+		return err
 	}
 
 	totalReward := new(big.Int).Add(epochInfo.BlockReward, state.GetBalance(consensus.FeeRecoder))
@@ -778,6 +842,7 @@ func (d *Dpos) trySendBlockReward(chain consensus.ChainHeaderReader, header *typ
 
 	nonce := state.GetNonce(header.Coinbase)
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &systemcontract.SystemRewardsContractAddr, nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
+
 	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig); err != nil {
 		return err
 	}
@@ -785,16 +850,17 @@ func (d *Dpos) trySendBlockReward(chain consensus.ChainHeaderReader, header *typ
 	return nil
 }
 
-func (d *Dpos) tryPunishValidator(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) (bool, error) {
+func (d *Dpos) tryPunishValidator(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
 	number := header.Number.Uint64()
 	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	// Bail out if we're unauthorized to sign a block
 	if _, authorized := snap.Validators[header.Coinbase]; !authorized {
-		return false, nil
+		log.Warn("tryPunishValidator authorized false!!!", "header.coinbase", header.Coinbase)
+		return nil
 	}
 	validators := snap.validators()
 	outTurnValidator := validators[number%uint64(len(validators))]
@@ -806,43 +872,31 @@ func (d *Dpos) tryPunishValidator(chain consensus.ChainHeaderReader, header *typ
 			break
 		}
 	}
-	log.Info("tryPunishValidator", "header", number, "validators", validators, "outTurnValidator", outTurnValidator)
 	if !signedRecently {
 		return d.punishValidator(outTurnValidator, chain, header, state)
 	}
 
-	return false, nil
+	return nil
 }
 
 // punishValidator punish validator when not mining in turn
-func (d *Dpos) punishValidator(validator common.Address, chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) (bool, error) {
+func (d *Dpos) punishValidator(validator common.Address, chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
 
 	method := "punish"
 	data, err := d.abi[systemcontract.SystemRewardsContractName].Pack(method, validator)
 	if err != nil {
 		log.Error("punish failed", "error", err)
-		return false, err
+		return err
 	}
 	nonce := state.GetNonce(header.Coinbase)
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &systemcontract.SystemRewardsContractAddr, nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
 	// use parent
-	result, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig)
+	_, err = vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, d), d.chainConfig)
 	if err != nil {
-		return false, err
-	}
-	ret, err := d.abi[systemcontract.SystemRewardsContractName].Unpack(method, result)
-	if err != nil {
-		log.Error("punish unpack failed", "error", err)
-		return false, err
-	}
-	kickout, ok := ret[0].(bool)
-	if !ok {
-		return false, errors.New("punish result format error")
+		return err
 	}
 
-	log.Info("punish", "header", header.Number, "validator", validator, "kickout", kickout)
-
-	return kickout, nil
+	return nil
 }
 
 // doSomethingAtEpoch tryElect new epoch validators
@@ -850,13 +904,16 @@ func (d *Dpos) doSomethingAtEpoch(chain consensus.ChainHeaderReader, header *typ
 	if header.Coinbase == common.BigToAddress(common.Big0) {
 		return nil
 	}
+
 	number := header.Number.Uint64()
 	snap, err := d.snapshot(chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return err
 	}
+
 	// Bail out if we're unauthorized to sign a block
 	if _, authorized := snap.Validators[header.Coinbase]; !authorized {
+		log.Warn("doSomethingAtEpoch authorized false!!!", "header.coinbase", header.Coinbase)
 		return nil
 	}
 
@@ -886,8 +943,10 @@ func (d *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, head
 	if err != nil {
 		return err
 	}
+
 	// Bail out if we're unauthorized to sign a block
 	if _, authorized := snap.Validators[header.Coinbase]; !authorized {
+		log.Warn("initializeSystemContracts authorized false!!!", "header.coinbase", header.Coinbase)
 		return nil
 	}
 
@@ -901,14 +960,14 @@ func (d *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, head
 		addr    common.Address
 		packFun func() ([]byte, error)
 	}{
-		{systemcontract.ProposalsContractAddr, func() ([]byte, error) {
-			return d.abi[systemcontract.ProposalsContractName].Pack(method, systemcontract.ValidatorsContractAddr)
+		{systemcontract.ValidatorProposalsContractAddr, func() ([]byte, error) {
+			return d.abi[systemcontract.ValidatorProposalsContractName].Pack(method, systemcontract.ValidatorsContractAddr)
 		}},
 		{systemcontract.SystemRewardsContractAddr, func() ([]byte, error) {
 			return d.abi[systemcontract.SystemRewardsContractName].Pack(method, systemcontract.ValidatorsContractAddr, systemcontract.NodeVotesContractAddr)
 		}},
 		{systemcontract.ValidatorsContractAddr, func() ([]byte, error) {
-			return d.abi[systemcontract.ValidatorsContractName].Pack(method, systemcontract.ProposalsContractAddr, systemcontract.SystemRewardsContractAddr, systemcontract.NodeVotesContractAddr, systemcontract.InitValAddress, systemcontract.InitDeposit, systemcontract.InitRate)
+			return d.abi[systemcontract.ValidatorsContractName].Pack(method, systemcontract.ValidatorProposalsContractAddr, systemcontract.SystemRewardsContractAddr, systemcontract.NodeVotesContractAddr, systemcontract.InitValAddress, systemcontract.InitDeposit, systemcontract.InitRate)
 		}},
 		{systemcontract.NodeVotesContractAddr, func() ([]byte, error) {
 			return d.abi[systemcontract.NodeVotesContractName].Pack(method, systemcontract.ValidatorsContractAddr, systemcontract.SystemRewardsContractAddr)
@@ -918,6 +977,9 @@ func (d *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, head
 		}},
 		{systemcontract.AddressListContractAddr, func() ([]byte, error) {
 			return d.abi[systemcontract.AddressListContractName].Pack("initializeV2")
+		}},
+		{systemcontract.ProposalsContractAddr, func() ([]byte, error) {
+			return d.abi[systemcontract.ProposalsContractName].Pack(method, genesisValidators)
 		}},
 	}
 
