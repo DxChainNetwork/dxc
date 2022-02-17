@@ -19,7 +19,6 @@ package dpos
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/DxChainNetwork/dxc/log"
 	"sort"
 
 	"github.com/DxChainNetwork/dxc/common"
@@ -200,6 +199,5 @@ func (s *Snapshot) inturn(number uint64, validator common.Address) bool {
 	for offset < len(validators) && validators[offset] != validator {
 		offset++
 	}
-	log.Info("[Snapshot inturn]", "validators", len(validators), "number", number, "validator", validator.String())
 	return (number % uint64(len(validators))) == uint64(offset)
 }
