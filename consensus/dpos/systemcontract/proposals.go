@@ -36,8 +36,8 @@ type ProposalInfo struct {
 // NewProposals return Proposals contract instance
 func NewProposals() *Proposals {
 	return &Proposals{
-		abi:          abiMap[ProposalsContractName],
-		contractAddr: ProposalsContractAddr,
+		abi:          abiMap[ValidatorProposalsContractName],
+		contractAddr: ValidatorProposalsContractAddr,
 	}
 }
 
@@ -49,7 +49,6 @@ func (p *Proposals) InitProposal(statedb *state.StateDB, header *types.Header, c
 		return err
 	} else {
 		nonce := statedb.GetNonce(header.Coinbase)
-		log.Info("InitProposal getBalance", "addr", header.Coinbase, "balance", statedb.GetBalance(header.Coinbase))
 		msg := vmcaller.NewLegacyMessage(header.Coinbase, &p.contractAddr, nonce, value, math.MaxUint64, new(big.Int), data, true)
 		if _, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config); err != nil {
 			log.Error("InitProposal execute", "error", err)
@@ -84,7 +83,6 @@ func (p *Proposals) AddressProposalSets(statedb *state.StateDB, header *types.He
 	if proposalIds, ok := ret[0].([][4]byte); !ok {
 		return [][4]byte{}, errors.New("invalid AddressProposalSets result format")
 	} else {
-		log.Info("AddressProposalSets result", "address", addr.String(), "result", proposalIds)
 		return proposalIds, nil
 	}
 
@@ -108,14 +106,12 @@ func (p *Proposals) AllProposalSets(statedb *state.StateDB, header *types.Header
 	}
 
 	ret, err := p.abi.Unpack(method, result)
-	log.Info("allProposals result", "ret", ret)
 	if err != nil {
 		return [][4]byte{}, err
 	}
 	if proposalIds, ok := ret[0].([][4]byte); !ok {
 		return [][4]byte{}, errors.New("invalid AddressProposalSets result format")
 	} else {
-		log.Info("AllProposalSets result", "result", proposalIds)
 		return proposalIds, nil
 	}
 }
@@ -194,7 +190,6 @@ func (p *Proposals) AddressProposalCount(statedb *state.StateDB, header *types.H
 	if count, ok := ret[0].(*big.Int); !ok {
 		return big.NewInt(0), errors.New("invalid AddressProposalCount result format")
 	} else {
-		log.Info("AddressProposalCount result", "address", addr.String(), "result", count)
 		return count, nil
 	}
 }
@@ -217,14 +212,12 @@ func (p *Proposals) ProposalCount(statedb *state.StateDB, header *types.Header, 
 	}
 
 	ret, err := p.abi.Unpack(method, result)
-	log.Info("allProposals result", "ret", ret)
 	if err != nil {
 		return big.NewInt(0), err
 	}
 	if count, ok := ret[0].(*big.Int); !ok {
 		return big.NewInt(0), errors.New("invalid AddressProposalSets result format")
 	} else {
-		log.Info("AllProposalSets result", "result", count)
 		return count, nil
 	}
 }

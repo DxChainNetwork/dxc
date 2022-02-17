@@ -72,7 +72,7 @@ func (pd *PublicDposTxAPI) sendDposTx(ctx context.Context, args *TransactionArgs
 // InitProposal initProposal function of Proposal contract
 func (pd *PublicDposTxAPI) InitProposal(pType uint8, rate uint8, details string, args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
-	args.To = &systemcontract.ProposalsContractAddr
+	args.To = &systemcontract.ValidatorProposalsContractAddr
 
 	if err := pd.prepareAccount(args); err != nil {
 		return common.Hash{}, err
@@ -86,7 +86,7 @@ func (pd *PublicDposTxAPI) InitProposal(pType uint8, rate uint8, details string,
 	method := "initProposal"
 	abiMap := systemcontract.GetInteractiveABI()
 
-	data, err := abiMap[systemcontract.ProposalsContractName].Pack(method, pType, rate, details)
+	data, err := abiMap[systemcontract.ValidatorProposalsContractName].Pack(method, pType, rate, details)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -103,7 +103,7 @@ func (pd *PublicDposTxAPI) InitProposal(pType uint8, rate uint8, details string,
 // UpdateProposal updateProposal function of Proposals contract
 func (pd *PublicDposTxAPI) UpdateProposal(id string, rate uint8, deposit *hexutil.Big, details string, args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
-	args.To = &systemcontract.ProposalsContractAddr
+	args.To = &systemcontract.ValidatorProposalsContractAddr
 
 	if err := pd.prepareAccount(args); err != nil {
 		return common.Hash{}, err
@@ -124,7 +124,7 @@ func (pd *PublicDposTxAPI) UpdateProposal(id string, rate uint8, deposit *hexuti
 	var idByte4 [4]byte
 	copy(idByte4[:], idBytes[:4])
 
-	data, err := abiMap[systemcontract.ProposalsContractName].Pack(method, idByte4, rate, (*big.Int)(deposit), details)
+	data, err := abiMap[systemcontract.ValidatorProposalsContractName].Pack(method, idByte4, rate, (*big.Int)(deposit), details)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -141,7 +141,7 @@ func (pd *PublicDposTxAPI) UpdateProposal(id string, rate uint8, deposit *hexuti
 // CancelProposal cancelProposal function of Proposals contract
 func (pd *PublicDposTxAPI) CancelProposal(id string, args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
-	args.To = &systemcontract.ProposalsContractAddr
+	args.To = &systemcontract.ValidatorProposalsContractAddr
 
 	if err := pd.prepareAccount(args); err != nil {
 		return common.Hash{}, err
@@ -162,7 +162,7 @@ func (pd *PublicDposTxAPI) CancelProposal(id string, args *TransactionArgs) (com
 	var idByte4 [4]byte
 	copy(idByte4[:], idBytes[:4])
 
-	data, err := abiMap[systemcontract.ProposalsContractName].Pack(method, idByte4)
+	data, err := abiMap[systemcontract.ValidatorProposalsContractName].Pack(method, idByte4)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -179,7 +179,7 @@ func (pd *PublicDposTxAPI) CancelProposal(id string, args *TransactionArgs) (com
 // Guarantee guarantee function of Proposals contract
 func (pd *PublicDposTxAPI) Guarantee(id string, args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
-	args.To = &systemcontract.ProposalsContractAddr
+	args.To = &systemcontract.ValidatorProposalsContractAddr
 
 	if err := pd.prepareAccount(args); err != nil {
 		return common.Hash{}, err
@@ -200,7 +200,7 @@ func (pd *PublicDposTxAPI) Guarantee(id string, args *TransactionArgs) (common.H
 	var idByte4 [4]byte
 	copy(idByte4[:], idBytes[:4])
 
-	data, err := abiMap[systemcontract.ProposalsContractName].Pack(method, idByte4)
+	data, err := abiMap[systemcontract.ValidatorProposalsContractName].Pack(method, idByte4)
 	if err != nil {
 		return common.Hash{}, err
 	}
