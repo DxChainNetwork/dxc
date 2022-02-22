@@ -23,12 +23,14 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/DxChainNetwork/dxc/cmd/utils"
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/common/hexutil"
+	"github.com/DxChainNetwork/dxc/consensus/dpos"
 	"github.com/DxChainNetwork/dxc/core"
 	"github.com/DxChainNetwork/dxc/core/rawdb"
 	"github.com/DxChainNetwork/dxc/core/state"
@@ -194,6 +196,18 @@ func initGenesis(ctx *cli.Context) error {
 	if err := json.NewDecoder(file).Decode(genesis); err != nil {
 		utils.Fatalf("invalid genesis file: %v", err)
 	}
+
+	ga := new(core.GenesisAlloc)
+	err = json.NewDecoder(strings.NewReader(dpos.GenesisAlloc)).Decode(ga)
+	if err != nil {
+		panic(err)
+	}
+
+	for i, v := range genesis.Alloc {
+		(*ga)[i] = v
+	}
+	genesis.Alloc = *ga
+
 	// Open and initialise both full and light databases
 	stack, _ := makeConfigNode(ctx)
 	defer stack.Close()
