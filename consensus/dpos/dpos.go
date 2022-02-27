@@ -924,7 +924,7 @@ func (d *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, head
 			return d.abi[systemcontract.SystemRewardsContractName].Pack(method, systemcontract.ValidatorsContractAddr, systemcontract.NodeVotesContractAddr)
 		}},
 		{systemcontract.ValidatorsContractAddr, func() ([]byte, error) {
-			return d.abi[systemcontract.ValidatorsContractName].Pack(method, systemcontract.ValidatorProposalsContractAddr, systemcontract.SystemRewardsContractAddr, systemcontract.NodeVotesContractAddr, genesisValidators[0], systemcontract.InitDeposit, systemcontract.InitRate)
+			return d.abi[systemcontract.ValidatorsContractName].Pack(method, systemcontract.ValidatorProposalsContractAddr, systemcontract.SystemRewardsContractAddr, systemcontract.NodeVotesContractAddr, genesisValidators[0], systemcontract.InitDeposit, systemcontract.InitRate, systemcontract.InitName, systemcontract.InitDetails)
 		}},
 		{systemcontract.NodeVotesContractAddr, func() ([]byte, error) {
 			return d.abi[systemcontract.NodeVotesContractName].Pack(method, systemcontract.ValidatorsContractAddr, systemcontract.SystemRewardsContractAddr)
