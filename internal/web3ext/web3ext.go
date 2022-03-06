@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// package web3ext contains geth specific web3.js extensions.
+// Package web3ext contains geth specific web3.js extensions.
 package web3ext
 
 var Modules = map[string]string{
@@ -117,8 +117,8 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'minDeposit',
-			call: 'dpos_getMinDeposit',
+			name: 'base',
+			call: 'dpos_getBaseInfos',
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 			params: 1
 		}),
@@ -159,76 +159,58 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'getVoters',
-			call: 'dpos_getVoters',
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null,web3._extend.formatters.inputBlockNumberFormatter],
-			params: 4
+			name: 'validatorVoters',
+			call: 'dpos_getValidatorVoters',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'effictiveValsLength',
-			call: 'dpos_getEffictiveValsLength',
+			call: 'dpos_effictiveValsLength',
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'invalidValsLength',
-			call: 'dpos_getInvalidValsLength',
+			call: 'dpos_invalidValsLength',
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'cancelQueueValsLength',
-			call: 'dpos_getCancelQueueValidatorsLength',
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'validatorUpdateRate',
-			call: 'dpos_getValidatorUpdateRate',
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'updateRateValidators',
-			call: 'dpos_getUpdateRateValidators',
-			inputFormatter: [null,null,web3._extend.formatters.inputBlockNumberFormatter],
-			params: 3
-		}),
-		new web3._extend.Method({
-			name: 'updateRateValidatorsLength',
-			call: 'dpos_getUpdateRateValidatorsLength',
+			call: 'dpos_cancelQueueValidatorsLength',
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'validatorVotersLength',
-			call: 'dpos_getValidatorToVotersLength',
+			call: 'dpos_validatorVotersLength',
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
 			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'isEffictiveValidator',
-			call: 'dpos_getIsEffictiveValidator',
+			call: 'dpos_isEffictiveValidator',
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
 			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'allProposalIds',
 			call: 'dpos_getAllProposalSets',
-			inputFormatter: [null,null,web3._extend.formatters.inputBlockNumberFormatter],
-			params: 3
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'addressProposalIds',
 			call: 'dpos_getAddressProposalSets',
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null,web3._extend.formatters.inputBlockNumberFormatter],
-			params: 4
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'allProposals',
 			call: 'dpos_getAllProposals',
-			inputFormatter: [null,null,web3._extend.formatters.inputBlockNumberFormatter],
-			params: 3
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'proposal',
@@ -239,8 +221,8 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'addressProposals',
 			call: 'dpos_getAddressProposals',
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null,web3._extend.formatters.inputBlockNumberFormatter],
-			params: 4
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'allProposalsCount',
@@ -255,63 +237,45 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'pendingVoterReward',
-			call: 'dpos_getPendingVoteReward',
+			name: 'pendingVoteReward',
+			call: 'dpos_pendingVoteReward',
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
 			params: 3
 		}),
 		new web3._extend.Method({
-			name: 'pendingVoterRedeem',
-			call: 'dpos_getPendingRedeem',
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
-			params: 2
+			name: 'pendingVoteRedeem',
+			call: 'dpos_pendingVoteRedeem',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 3
 		}),
 		new web3._extend.Method({
 			name: 'voteListLength',
-			call: 'dpos_getVoteListLength',
+			call: 'dpos_voteListLength',
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'cancelVoteValidatorListLength',
-			call: 'dpos_getCancelVoteValidatorListLength',
+			name: 'votesRewardRedeemInfo',
+			call: 'dpos_votesRewardRedeemInfo',
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'votesRewardRedeemInfos',
+			call: 'dpos_votesRewardRedeemInfos',
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
 			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'cancelVoteValidatorList',
-			call: 'dpos_getCancelVoteValidatorList',
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null,web3._extend.formatters.inputBlockNumberFormatter],
-			params: 4
-		}),
-		new web3._extend.Method({
-			name: 'voteList',
-			call: 'dpos_getVoteList',
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null,web3._extend.formatters.inputBlockNumberFormatter],
-			params: 4
-		}),
-		new web3._extend.Method({
-			name: 'voterRedeemInfo',
-			call: 'dpos_getRedeemInfo',
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,null,web3._extend.formatters.inputBlockNumberFormatter],
-			params: 4
 		}),
 		new web3._extend.Method({
 			name: 'epochInfo',
-			call: 'dpos_getEpochInfo',
+			call: 'dpos_epochInfo',
 			inputFormatter: [null,web3._extend.formatters.inputBlockNumberFormatter],
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'getValRewardIndex',
-			call: 'dpos_getSysRewards',
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'getValRewardEpochs',
-			call: 'dpos_getValRewardEpochs',
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
+			name: 'kickoutInfo',
+			call: 'dpos_kickoutInfo',
+			inputFormatter: [null,web3._extend.formatters.inputBlockNumberFormatter],
 			params: 2
 		}),
 		new web3._extend.Method({
@@ -321,40 +285,40 @@ web3._extend({
 			params: 3
 		}),
 		new web3._extend.Method({
-			name: 'getValRewardInfoByEpoch',
-			call: 'dpos_getValRewardInfoByEpoch',
+			name: 'validatorRewardInfoByEpoch',
+			call: 'dpos_validatorRewardInfoByEpoch',
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,null,web3._extend.formatters.inputBlockNumberFormatter],
 			params: 3
 		}),
 		new web3._extend.Method({
-			name: 'pendingValReward',
-			call: 'dpos_getPendingValReward',
+			name: 'pendingValidatorReward',
+			call: 'dpos_pendingValidatorReward',
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'pendingValidatorToVoterReward',
-			call: 'dpos_getPendingVoterReward',
+			name: 'validatorRewardsInfo',
+			call: 'dpos_validatorRewardsInfo',
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.formatters.inputBlockNumberFormatter],
 			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'initProposal',
 			call: 'dpos_initProposal',
-			inputFormatter: [null,null,null,function(options) {
-				options = options == undefined? {} : options
-				return web3._extend.formatters.inputCallFormatter(options)
-			}],
-			params: 4
-		}),
-		new web3._extend.Method({
-			name: 'updateProposal',
-			call: 'dpos_updateProposal',
-			inputFormatter: [null,null,web3.fromDecimal, null, function(options) {
+			inputFormatter: [null,null,null,null,function(options) {
 				options = options == undefined? {} : options
 				return web3._extend.formatters.inputCallFormatter(options)
 			}],
 			params: 5
+		}),
+		new web3._extend.Method({
+			name: 'updateProposal',
+			call: 'dpos_updateProposal',
+			inputFormatter: [null,null,web3.fromDecimal, null, null, function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
+			}],
+			params: 6
 		}),
 		new web3._extend.Method({
 			name: 'cancelProposal',
@@ -393,8 +357,26 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'validatorUnstake',
-			call: 'dpos_validatorUnstake',
+			name: 'updateValidatorNameDetails',
+			call: 'dpos_updateValidatorNameDetails',
+			inputFormatter: [null,null,function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
+			}],
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'unstake',
+			call: 'dpos_unstake',
+			inputFormatter: [function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
+			}],
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'restore',
+			call: 'dpos_restore',
 			inputFormatter: [function(options) {
 				options = options == undefined? {} : options
 				return web3._extend.formatters.inputCallFormatter(options)
@@ -411,8 +393,8 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'earnValReward',
-			call: 'dpos_earnValReward',
+			name: 'earnValidatorReward',
+			call: 'dpos_earnValidatorReward',
 			inputFormatter: [function(options) {
 				options = options == undefined? {} : options
 				return web3._extend.formatters.inputCallFormatter(options)
@@ -420,8 +402,8 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'earnVoterReward',
-			call: 'dpos_earnVoterReward',
+			name: 'earnVoteReward',
+			call: 'dpos_earnVoteReward',
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter,function(options) {
 				options = options == undefined? {} : options
 				return web3._extend.formatters.inputCallFormatter(options)
@@ -440,22 +422,18 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'cancelVote',
 			call: 'dpos_cancelVote',
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter,function(options) {
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3.fromDecimal,function(options) {
 				options = options == undefined? {} : options
 				return web3._extend.formatters.inputCallFormatter(options)
 			}],
-			params: 2
+			params: 3
 		}),
 		new web3._extend.Method({
 			name: 'voterRedeem',
 			call: 'dpos_voterRedeem',
-			inputFormatter: [function(vals) {
-				var formatVals = [];
-				for (var i = 0; i < vals.length; i++) { formatVals.push(web3._extend.formatters.inputAddressFormatter(vals[i])); }
-				return formatVals;
-			}, function(options) {
-					options = options == undefined? {} : options
-					return web3._extend.formatters.inputCallFormatter(options)
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter, function(options) {
+				options = options == undefined? {} : options
+				return web3._extend.formatters.inputCallFormatter(options)
 			}],
 			params: 2
 		}),

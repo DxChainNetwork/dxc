@@ -70,7 +70,7 @@ func (pd *PublicDposTxAPI) sendDposTx(ctx context.Context, args *TransactionArgs
 }
 
 // InitProposal initProposal function of Proposal contract
-func (pd *PublicDposTxAPI) InitProposal(pType uint8, rate uint8, details string, args *TransactionArgs) (common.Hash, error) {
+func (pd *PublicDposTxAPI) InitProposal(pType uint8, rate uint8, name string, details string, args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
 	args.To = &systemcontract.ValidatorProposalsContractAddr
 
@@ -81,12 +81,12 @@ func (pd *PublicDposTxAPI) InitProposal(pType uint8, rate uint8, details string,
 	pd.nonceLock.LockAddr(*args.From)
 	defer pd.nonceLock.UnlockAddr(*args.From)
 
-	log.Info("initProposal", "ptype", pType, "rate", rate, "details", details)
+	log.Info("initProposal", "ptype", pType, "rate", rate, "name", name, "details", details)
 
 	method := "initProposal"
 	abiMap := systemcontract.GetInteractiveABI()
 
-	data, err := abiMap[systemcontract.ValidatorProposalsContractName].Pack(method, pType, rate, details)
+	data, err := abiMap[systemcontract.ValidatorProposalsContractName].Pack(method, pType, rate, name, details)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -101,7 +101,7 @@ func (pd *PublicDposTxAPI) InitProposal(pType uint8, rate uint8, details string,
 }
 
 // UpdateProposal updateProposal function of Proposals contract
-func (pd *PublicDposTxAPI) UpdateProposal(id string, rate uint8, deposit *hexutil.Big, details string, args *TransactionArgs) (common.Hash, error) {
+func (pd *PublicDposTxAPI) UpdateProposal(id string, rate uint8, deposit *hexutil.Big, name string, details string, args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
 	args.To = &systemcontract.ValidatorProposalsContractAddr
 
@@ -112,7 +112,7 @@ func (pd *PublicDposTxAPI) UpdateProposal(id string, rate uint8, deposit *hexuti
 	pd.nonceLock.LockAddr(*args.From)
 	defer pd.nonceLock.UnlockAddr(*args.From)
 
-	log.Info("updateProposal", "id", id, "rate", rate, "deposit", deposit, "details", details)
+	log.Info("updateProposal", "id", id, "rate", rate, "deposit", deposit, "name", name, "details", details)
 
 	method := "updateProposal"
 	abiMap := systemcontract.GetInteractiveABI()
@@ -124,7 +124,7 @@ func (pd *PublicDposTxAPI) UpdateProposal(id string, rate uint8, deposit *hexuti
 	var idByte4 [4]byte
 	copy(idByte4[:], idBytes[:4])
 
-	data, err := abiMap[systemcontract.ValidatorProposalsContractName].Pack(method, idByte4, rate, (*big.Int)(deposit), details)
+	data, err := abiMap[systemcontract.ValidatorProposalsContractName].Pack(method, idByte4, rate, (*big.Int)(deposit), name, details)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -276,8 +276,39 @@ func (pd *PublicDposTxAPI) UpdateValidatorRate(rate uint8, args *TransactionArgs
 	return txHash, nil
 }
 
-// ValidatorUnstake unstake function of Validators contract
-func (pd *PublicDposTxAPI) ValidatorUnstake(args *TransactionArgs) (common.Hash, error) {
+// UpdateValidatorNameDetails updateValidatorNameDetails function of Validators contract
+func (pd *PublicDposTxAPI) UpdateValidatorNameDetails(name string, details string, args *TransactionArgs) (common.Hash, error) {
+	ctx := context.Background()
+	args.To = &systemcontract.ValidatorsContractAddr
+
+	if err := pd.prepareAccount(args); err != nil {
+		return common.Hash{}, err
+	}
+
+	pd.nonceLock.LockAddr(*args.From)
+	defer pd.nonceLock.UnlockAddr(*args.From)
+
+	log.Info("updateValidatorNameDetails", "from", args.From, "name", name, "details", details)
+
+	method := "updateValidatorNameDetails"
+	abiMap := systemcontract.GetInteractiveABI()
+
+	data, err := abiMap[systemcontract.ValidatorsContractName].Pack(method, name, details)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	args.Data = (*hexutil.Bytes)(&data)
+
+	txHash, err := pd.sendDposTx(ctx, args)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
+
+// Unstake unstake function of Validators contract
+func (pd *PublicDposTxAPI) Unstake(args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
 	args.To = &systemcontract.ValidatorsContractAddr
 
@@ -291,6 +322,37 @@ func (pd *PublicDposTxAPI) ValidatorUnstake(args *TransactionArgs) (common.Hash,
 	log.Info("validatorUnstake", "from", args.From)
 
 	method := "unstake"
+	abiMap := systemcontract.GetInteractiveABI()
+
+	data, err := abiMap[systemcontract.ValidatorsContractName].Pack(method)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	args.Data = (*hexutil.Bytes)(&data)
+
+	txHash, err := pd.sendDposTx(ctx, args)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
+
+// Restore restore function of Validators contract
+func (pd *PublicDposTxAPI) Restore(args *TransactionArgs) (common.Hash, error) {
+	ctx := context.Background()
+	args.To = &systemcontract.ValidatorsContractAddr
+
+	if err := pd.prepareAccount(args); err != nil {
+		return common.Hash{}, err
+	}
+
+	pd.nonceLock.LockAddr(*args.From)
+	defer pd.nonceLock.UnlockAddr(*args.From)
+
+	log.Info("validator Restore", "from", args.From)
+
+	method := "restore"
 	abiMap := systemcontract.GetInteractiveABI()
 
 	data, err := abiMap[systemcontract.ValidatorsContractName].Pack(method)
@@ -338,8 +400,8 @@ func (pd *PublicDposTxAPI) ValidatorRedeem(args *TransactionArgs) (common.Hash, 
 	return txHash, nil
 }
 
-// EarnValReward earnValReward function of SystemRewards contract
-func (pd *PublicDposTxAPI) EarnValReward(args *TransactionArgs) (common.Hash, error) {
+// EarnValidatorReward earnValidatorReward function of SystemRewards contract
+func (pd *PublicDposTxAPI) EarnValidatorReward(args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
 	args.To = &systemcontract.SystemRewardsContractAddr
 
@@ -350,9 +412,9 @@ func (pd *PublicDposTxAPI) EarnValReward(args *TransactionArgs) (common.Hash, er
 	pd.nonceLock.LockAddr(*args.From)
 	defer pd.nonceLock.UnlockAddr(*args.From)
 
-	log.Info("earnValReward", "from", args.From)
+	log.Info("earnValidatorReward", "from", args.From)
 
-	method := "earnValReward"
+	method := "earnValidatorReward"
 	abiMap := systemcontract.GetInteractiveABI()
 
 	data, err := abiMap[systemcontract.SystemRewardsContractName].Pack(method)
@@ -369,8 +431,8 @@ func (pd *PublicDposTxAPI) EarnValReward(args *TransactionArgs) (common.Hash, er
 	return txHash, nil
 }
 
-// EarnVoterReward earn function of NodeVotes contract
-func (pd *PublicDposTxAPI) EarnVoterReward(val common.Address, args *TransactionArgs) (common.Hash, error) {
+// EarnVoteReward earn function of NodeVotes contract
+func (pd *PublicDposTxAPI) EarnVoteReward(val common.Address, args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
 	args.To = &systemcontract.NodeVotesContractAddr
 
@@ -381,7 +443,7 @@ func (pd *PublicDposTxAPI) EarnVoterReward(val common.Address, args *Transaction
 	pd.nonceLock.LockAddr(*args.From)
 	defer pd.nonceLock.UnlockAddr(*args.From)
 
-	log.Info("earn voter reward", "from", args.From)
+	log.Info("earn vote reward", "from", args.From, "validator", val)
 
 	method := "earn"
 	abiMap := systemcontract.GetInteractiveABI()
@@ -432,7 +494,7 @@ func (pd *PublicDposTxAPI) Vote(val common.Address, args *TransactionArgs) (comm
 }
 
 // CancelVote cancelVote function of NodeVotes contract
-func (pd *PublicDposTxAPI) CancelVote(val common.Address, args *TransactionArgs) (common.Hash, error) {
+func (pd *PublicDposTxAPI) CancelVote(val common.Address, amount *hexutil.Big, args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
 	args.To = &systemcontract.NodeVotesContractAddr
 
@@ -443,12 +505,12 @@ func (pd *PublicDposTxAPI) CancelVote(val common.Address, args *TransactionArgs)
 	pd.nonceLock.LockAddr(*args.From)
 	defer pd.nonceLock.UnlockAddr(*args.From)
 
-	log.Info("cancelVote", "voter", args.From, "validator", val)
+	log.Info("cancelVote", "voter", args.From, "validator", val, "amount", amount)
 
 	method := "cancelVote"
 	abiMap := systemcontract.GetInteractiveABI()
 
-	data, err := abiMap[systemcontract.NodeVotesContractName].Pack(method, val)
+	data, err := abiMap[systemcontract.NodeVotesContractName].Pack(method, val, (*big.Int)(amount))
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -463,7 +525,7 @@ func (pd *PublicDposTxAPI) CancelVote(val common.Address, args *TransactionArgs)
 }
 
 // VoterRedeem redeem function of NodeVotes contract
-func (pd *PublicDposTxAPI) VoterRedeem(vals []common.Address, args *TransactionArgs) (common.Hash, error) {
+func (pd *PublicDposTxAPI) VoterRedeem(val common.Address, args *TransactionArgs) (common.Hash, error) {
 	ctx := context.Background()
 	args.To = &systemcontract.NodeVotesContractAddr
 
@@ -474,12 +536,12 @@ func (pd *PublicDposTxAPI) VoterRedeem(vals []common.Address, args *TransactionA
 	pd.nonceLock.LockAddr(*args.From)
 	defer pd.nonceLock.UnlockAddr(*args.From)
 
-	log.Info("voter redeem", "voter", args.From, "validators", vals)
+	log.Info("voter redeem", "voter", args.From, "validator", val)
 
 	method := "redeem"
 	abiMap := systemcontract.GetInteractiveABI()
 
-	data, err := abiMap[systemcontract.NodeVotesContractName].Pack(method, vals)
+	data, err := abiMap[systemcontract.NodeVotesContractName].Pack(method, val)
 	if err != nil {
 		return common.Hash{}, err
 	}
