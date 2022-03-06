@@ -27,67 +27,109 @@ func NewBase() *Base {
 	}
 }
 
-// MinDeposit `MIN_DEPOSIT`
-func (b *Base) MinDeposit(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) (*big.Int, error) {
-	method := "MIN_DEPOSIT"
-	data, err := b.abi.Pack(method)
+func (b *Base) GetBaseInfos(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) (map[string]interface{}, error) {
+	baseInfos := map[string]interface{}{}
 
-	if err != nil {
-		log.Error("can't pack Base contract method", "method", method)
-		return new(big.Int), err
+	uint256Methods := []string{"BLOCK_SECONDS", "EPOCH_BLOCKS", "MIN_DEPOSIT",
+		"MAX_VALIDATORS_COUNT", "MAX_VALIDATOR_DETAIL_LENGTH", "MAX_PUNISH_COUNT",
+		"RATE_SET_LOCK_EPOCHS", "VALIDATOR_UNSTAKE_LOCK_EPOCHS", "PROPOSAL_DURATION_EPOCHS",
+		"VALIDATOR_REWARD_LOCK_EPOCHS", "VOTE_CANCEL_EPOCHS", "TOTAL_DEPOSIT_LV1",
+		"TOTAL_DEPOSIT_LV2", "TOTAL_DEPOSIT_LV3", "TOTAL_DEPOSIT_LV4", "TOTAL_DEPOSIT_LV5",
+		"REWARD_DEPOSIT_UNDER_LV1", "REWARD_DEPOSIT_FROM_LV1_TO_LV2", "REWARD_DEPOSIT_FROM_LV2_TO_LV3",
+		"REWARD_DEPOSIT_FROM_LV3_TO_LV4", "REWARD_DEPOSIT_FROM_LV4_TO_LV5", "REWARD_DEPOSIT_OVER_LV5",
+		"MAX_VALIDATOR_COUNT_LV1", "MAX_VALIDATOR_COUNT_LV2", "MAX_VALIDATOR_COUNT_LV3", "MAX_VALIDATOR_COUNT_LV4",
+		"MIN_LEVEL_VALIDATOR_COUNT", "MEDIUM_LEVEL_VALIDATOR_COUNT", "MAX_LEVEL_VALIDATOR_COUNT", "SAFE_MULTIPLIER"}
+
+	uin8Methods := []string{"MIN_RATE", "MAX_RATE"}
+
+	addressMethods := []string{"BLACK_HOLE_ADDRESS"}
+
+	for i := 0; i < len(uint256Methods); i++ {
+		method := uint256Methods[i]
+		data, err := b.abi.Pack(method)
+
+		if err != nil {
+			log.Error("can't pack Base contract method", "method", method)
+			return map[string]interface{}{}, err
+		}
+
+		msg := vmcaller.NewLegacyMessage(header.Coinbase, &b.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+		result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+		if err != nil {
+			log.Error("GetBaseInfos result", "error", err)
+			return map[string]interface{}{}, err
+		}
+
+		//unpack data
+		ret, err := b.abi.Unpack(method, result)
+		if err != nil {
+			log.Error("GetBaseInfos Unpack", "error", err, "result", result)
+			return map[string]interface{}{}, err
+		}
+		info, ok := ret[0].(*big.Int)
+		if !ok {
+			return map[string]interface{}{}, errors.New("invalid minRate format")
+		}
+		baseInfos[method] = info
 	}
 
-	msg := vmcaller.NewLegacyMessage(header.Coinbase, &b.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
-	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
-	if err != nil {
-		log.Error("GetMinDeposit result", "error", err)
-		return new(big.Int), err
+	for i := 0; i < len(uin8Methods); i++ {
+		method := uin8Methods[i]
+		data, err := b.abi.Pack(method)
+
+		if err != nil {
+			log.Error("can't pack Base contract method", "method", method)
+			return map[string]interface{}{}, err
+		}
+
+		msg := vmcaller.NewLegacyMessage(header.Coinbase, &b.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+		result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+		if err != nil {
+			log.Error("GetBaseInfos result", "error", err)
+			return map[string]interface{}{}, err
+		}
+
+		//unpack data
+		ret, err := b.abi.Unpack(method, result)
+		if err != nil {
+			log.Error("GetBaseInfos Unpack", "error", err, "result", result)
+			return map[string]interface{}{}, err
+		}
+		info, ok := ret[0].(uint8)
+		if !ok {
+			return map[string]interface{}{}, errors.New("invalid minRate format")
+		}
+		baseInfos[method] = info
 	}
 
-	//unpack data
-	ret, err := b.abi.Unpack(method, result)
-	if err != nil {
-		log.Error("GetMinDeposit Unpack", "error", err, "result", result)
-		return new(big.Int), err
-	}
-	minDeposit, ok := ret[0].(*big.Int)
-	if !ok {
-		return new(big.Int), errors.New("invalid minDeposit format")
-	}
+	for i := 0; i < len(addressMethods); i++ {
+		method := addressMethods[i]
+		data, err := b.abi.Pack(method)
 
-	log.Info("get Base contract result", "method", method, "result", minDeposit.String())
+		if err != nil {
+			log.Error("can't pack Base contract method", "method", method)
+			return map[string]interface{}{}, err
+		}
 
-	return minDeposit, err
-}
+		msg := vmcaller.NewLegacyMessage(header.Coinbase, &b.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+		result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+		if err != nil {
+			log.Error("GetBaseInfos result", "error", err)
+			return map[string]interface{}{}, err
+		}
 
-func (b *Base) GetMinRate(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) (uint8, error) {
-	method := "MIN_RATE"
-	data, err := b.abi.Pack(method)
-
-	if err != nil {
-		log.Error("can't pack Base contract method", "method", method)
-		return uint8(0), err
-	}
-
-	msg := vmcaller.NewLegacyMessage(header.Coinbase, &b.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
-	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
-	if err != nil {
-		log.Error("GetMinRate result", "error", err)
-		return uint8(0), err
+		//unpack data
+		ret, err := b.abi.Unpack(method, result)
+		if err != nil {
+			log.Error("GetBaseInfos Unpack", "error", err, "result", result)
+			return map[string]interface{}{}, err
+		}
+		info, ok := ret[0].(common.Address)
+		if !ok {
+			return map[string]interface{}{}, errors.New("invalid minRate format")
+		}
+		baseInfos[method] = info
 	}
 
-	//unpack data
-	ret, err := b.abi.Unpack(method, result)
-	if err != nil {
-		log.Error("GetMinRate Unpack", "error", err, "result", result)
-		return uint8(0), err
-	}
-	minRate, ok := ret[0].(uint8)
-	if !ok {
-		return uint8(0), errors.New("invalid minRate format")
-	}
-
-	log.Info("get Base contract result", "method", method, "result", minRate)
-
-	return minRate, err
+	return baseInfos, nil
 }

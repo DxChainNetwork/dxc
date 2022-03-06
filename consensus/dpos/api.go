@@ -121,6 +121,19 @@ func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) 
 	return snap.validators(), nil
 }
 
+func (api *API) GetBaseInfos(number *rpc.BlockNumber) (map[string]interface{}, error) {
+	base := systemcontract.NewBase()
+	header, statedb, err := api.GetHeaderAndState(number)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+	infos, err := base.GetBaseInfos(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+	return infos, nil
+}
+
 // GetValidator return the validator of address
 func (api *API) GetValidator(addr common.Address, number *rpc.BlockNumber) (*systemcontract.Validator, error) {
 	validators := systemcontract.NewValidators()
@@ -359,20 +372,6 @@ func (api *API) IsEffictiveValidator(addr common.Address, number *rpc.BlockNumbe
 		return false, err
 	}
 	return val, nil
-}
-
-// MinDeposit return the minimum stake amount
-func (api *API) MinDeposit(number *rpc.BlockNumber) (*big.Int, error) {
-	base := systemcontract.NewBase()
-	header, statedb, err := api.GetHeaderAndState(number)
-	if err != nil {
-		return big.NewInt(0), err
-	}
-	minDeposit, err := base.MinDeposit(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
-	if err != nil {
-		return big.NewInt(0), err
-	}
-	return minDeposit, nil
 }
 
 // Proposals
