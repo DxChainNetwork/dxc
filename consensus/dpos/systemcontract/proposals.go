@@ -26,6 +26,7 @@ type ProposalInfo struct {
 	PType       uint8
 	Deposit     *big.Int
 	Rate        uint8
+	Name        string
 	Details     string
 	InitBlock   *big.Int
 	Guarantee   common.Address
@@ -39,24 +40,6 @@ func NewProposals() *Proposals {
 		abi:          abiMap[ValidatorProposalsContractName],
 		contractAddr: ValidatorProposalsContractAddr,
 	}
-}
-
-// InitProposal function initProposal
-func (p *Proposals) InitProposal(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, value *big.Int, pType uint8, rate uint8, details string) error {
-	method := "initProposal"
-	if data, err := p.abi.Pack(method, pType, rate, details); err != nil {
-		log.Error("can't pack Proposals contract method", "method", method)
-		return err
-	} else {
-		nonce := statedb.GetNonce(header.Coinbase)
-		msg := vmcaller.NewLegacyMessage(header.Coinbase, &p.contractAddr, nonce, value, math.MaxUint64, new(big.Int), data, true)
-		if _, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config); err != nil {
-			log.Error("InitProposal execute", "error", err)
-			return err
-		}
-	}
-
-	return nil
 }
 
 // AddressProposalSets function AddressProposalSets
@@ -85,7 +68,6 @@ func (p *Proposals) AddressProposalSets(statedb *state.StateDB, header *types.He
 	} else {
 		return proposalIds, nil
 	}
-
 }
 
 // AllProposalSets function AllProposalSets

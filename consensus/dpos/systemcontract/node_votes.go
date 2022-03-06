@@ -18,17 +18,16 @@ type NodeVotes struct {
 	contractAddr common.Address
 }
 
-type VoteInfo struct {
-	Validator         common.Address
-	Votes             *big.Int
-	RewardDebt        *big.Int
-	UpdateRewardEpoch *big.Int
-}
-
-type RedeemVoterInfo struct {
-	Validator   common.Address
-	Votes       *big.Int
-	RedeemBlock *big.Int
+type VotesRewardRedeemInfo struct {
+	Validator           common.Address
+	ValidatorName       string
+	ValidatorRate       uint8
+	ValidatorTotalVotes *big.Int
+	Amount              *big.Int
+	PendingReward       *big.Int
+	PendingRedeem       *big.Int
+	LockRedeemEpochs    []*big.Int
+	LockRedeemVotes     []*big.Int
 }
 
 // NewNodeVotes return Proposals contract instance
@@ -39,9 +38,9 @@ func NewNodeVotes() *NodeVotes {
 	}
 }
 
-// PendingVoteReward function PendingVoteReward
+// PendingVoteReward function pendingReward
 func (n *NodeVotes) PendingVoteReward(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, val common.Address, voter common.Address) (*big.Int, error) {
-	method := "pendingVoteReward"
+	method := "pendingReward"
 	data, err := n.abi.Pack(method, val, voter)
 
 	if err != nil {
@@ -69,10 +68,10 @@ func (n *NodeVotes) PendingVoteReward(statedb *state.StateDB, header *types.Head
 	return value, nil
 }
 
-// PendingRedeem function PendingRedeem
-func (n *NodeVotes) PendingRedeem(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address) (*big.Int, error) {
+// PendingVoteRedeem function PendingRedeem
+func (n *NodeVotes) PendingVoteRedeem(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, val common.Address, voter common.Address) (*big.Int, error) {
 	method := "pendingRedeem"
-	data, err := n.abi.Pack(method, addr)
+	data, err := n.abi.Pack(method, val, voter)
 
 	if err != nil {
 		log.Error("NodeVotes Pack error", "method", method, "error", err)
@@ -129,111 +128,52 @@ func (n *NodeVotes) VoteListLength(statedb *state.StateDB, header *types.Header,
 	return count, nil
 }
 
-// CancelVoteValidatorListLength function CancelVoteValidatorListLength
-func (n *NodeVotes) CancelVoteValidatorListLength(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, voter common.Address) (*big.Int, error) {
-	method := "cancelVoteValidatorListLength"
-	data, err := n.abi.Pack(method, voter)
+// VotesRewardRedeemInfo function votesRewardRedeemInfo
+func (n *NodeVotes) VotesRewardRedeemInfo(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, val common.Address, voter common.Address) (*VotesRewardRedeemInfo, error) {
+	method := "votesRewardRedeemInfo"
+	data, err := n.abi.Pack(method, val, voter)
 
 	if err != nil {
 		log.Error("NodeVotes Pack error", "method", method, "error", err)
-		return big.NewInt(0), err
+		return &VotesRewardRedeemInfo{}, err
 	}
 
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &n.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
 	if err != nil {
 		log.Error("NodeVotes contract execute error", "method", method, "error", err)
-		return big.NewInt(0), err
+		return &VotesRewardRedeemInfo{}, err
 	}
-
-	ret, err := n.abi.Unpack(method, result)
+	rewardRedeemInfo := &VotesRewardRedeemInfo{}
+	err = n.abi.UnpackIntoInterface(rewardRedeemInfo, method, result)
 	if err != nil {
 		log.Error("NodeVotes contract Unpack error", "method", method, "error", err, "result", result)
-		return big.NewInt(0), err
+		return &VotesRewardRedeemInfo{}, err
 	}
-	count, ok := ret[0].(*big.Int)
-	if !ok {
-		log.Error("NodeVotes contract format result error", "method", method, "error", err)
-		return big.NewInt(0), err
-	}
-	return count, nil
+	return rewardRedeemInfo, nil
 }
 
-// CancelVoteValidatorList function CancelVoteValidatorList
-func (n *NodeVotes) CancelVoteValidatorList(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, page *big.Int, size *big.Int) ([]common.Address, error) {
-	method := "cancelVoteValidatorList"
-	data, err := n.abi.Pack(method, addr, page, size)
-	if err != nil {
-		log.Error("NodeVotes Pack error", "method", method, "error", err)
-		return []common.Address{}, err
-	}
-	msg := vmcaller.NewLegacyMessage(header.Coinbase, &n.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
-	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
-	if err != nil {
-		log.Error("NodeVotes contract execute error", "method", method, "error", err)
-		return []common.Address{}, err
-	}
-
-	ret, err := n.abi.Unpack(method, result)
-	if err != nil {
-		log.Error("NodeVotes contract Unpack error", "method", method, "error", err, "result", result)
-		return []common.Address{}, err
-	}
-	voters, ok := ret[0].([]common.Address)
-	if !ok {
-		log.Error("NodeVotes contract format result error", "method", method, "error", err)
-		return []common.Address{}, err
-	}
-
-	return voters, nil
-}
-
-// VoteList function VoteList
-func (n *NodeVotes) VoteList(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, page *big.Int, size *big.Int) ([]VoteInfo, error) {
-	method := "voteList"
-	data, err := n.abi.Pack(method, addr, page, size)
+// VotesRewardRedeemInfoWithPage function votesRewardRedeemInfoWithPage
+func (n *NodeVotes) VotesRewardRedeemInfoWithPage(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, voter common.Address, page *big.Int, size *big.Int) ([]VotesRewardRedeemInfo, error) {
+	method := "votesRewardRedeemInfoWithPage"
+	data, err := n.abi.Pack(method, voter, page, size)
 
 	if err != nil {
 		log.Error("NodeVotes Pack error", "method", method, "error", err)
-		return []VoteInfo{}, err
+		return []VotesRewardRedeemInfo{}, err
 	}
 
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &n.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
 	if err != nil {
 		log.Error("NodeVotes contract execute error", "method", method, "error", err)
-		return []VoteInfo{}, err
+		return []VotesRewardRedeemInfo{}, err
 	}
-	var voteInfo []VoteInfo
-	err = n.abi.UnpackIntoInterface(&voteInfo, method, result)
+	var rewardRedeemInfos []VotesRewardRedeemInfo
+	err = n.abi.UnpackIntoInterface(&rewardRedeemInfos, method, result)
 	if err != nil {
 		log.Error("NodeVotes contract Unpack error", "method", method, "error", err, "result", result)
-		return []VoteInfo{}, err
+		return []VotesRewardRedeemInfo{}, err
 	}
-	return voteInfo, nil
-}
-
-// RedeemInfo function RedeemInfo
-func (n *NodeVotes) RedeemInfo(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, page *big.Int, size *big.Int) ([]RedeemVoterInfo, error) {
-	method := "redeemInfo"
-	data, err := n.abi.Pack(method, addr, page, size)
-
-	if err != nil {
-		log.Error("NodeVotes Pack error", "method", method, "error", err)
-		return []RedeemVoterInfo{}, err
-	}
-
-	msg := vmcaller.NewLegacyMessage(header.Coinbase, &n.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
-	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
-	if err != nil {
-		log.Error("NodeVotes contract execute error", "method", method, "error", err)
-		return []RedeemVoterInfo{}, err
-	}
-	var redeemVoterInfo []RedeemVoterInfo
-	err = n.abi.UnpackIntoInterface(&redeemVoterInfo, method, result)
-	if err != nil {
-		log.Error("NodeVotes contract Unpack error", "method", method, "error", err, "result", result)
-		return []RedeemVoterInfo{}, err
-	}
-	return redeemVoterInfo, nil
+	return rewardRedeemInfos, nil
 }
