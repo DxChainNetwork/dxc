@@ -18,7 +18,6 @@
 package ethconfig
 
 import (
-	"github.com/DxChainNetwork/dxc/consensus/dpos"
 	"math/big"
 	"os"
 	"os/user"
@@ -29,6 +28,7 @@ import (
 	"github.com/DxChainNetwork/dxc/common"
 	"github.com/DxChainNetwork/dxc/consensus"
 	"github.com/DxChainNetwork/dxc/consensus/clique"
+	"github.com/DxChainNetwork/dxc/consensus/dpos"
 	"github.com/DxChainNetwork/dxc/consensus/ethash"
 	"github.com/DxChainNetwork/dxc/core"
 	"github.com/DxChainNetwork/dxc/eth/downloader"

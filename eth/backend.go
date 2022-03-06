@@ -20,7 +20,6 @@ package eth
 import (
 	"errors"
 	"fmt"
-
 	"math/big"
 	"runtime"
 	"sync"

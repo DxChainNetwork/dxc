@@ -61,7 +61,7 @@ var (
 
 		Dpos: &DposConfig{
 			Period: 3,
-			Epoch:  20,
+			Epoch:  40,
 
 			EnableDevVerification: true,
 		},

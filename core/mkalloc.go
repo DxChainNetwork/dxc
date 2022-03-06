@@ -33,7 +33,9 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 
+	"github.com/DxChainNetwork/dxc/consensus/dpos"
 	"github.com/DxChainNetwork/dxc/core"
 	"github.com/DxChainNetwork/dxc/rlp"
 )
@@ -78,15 +80,29 @@ func main() {
 		os.Exit(1)
 	}
 
-	g := new(core.Genesis)
 	file, err := os.Open(os.Args[1])
 	if err != nil {
 		panic(err)
 	}
-	if err := json.NewDecoder(file).Decode(g); err != nil {
+	defer file.Close()
+
+	g2 := new(core.Genesis)
+	if err := json.NewDecoder(file).Decode(g2); err != nil {
 		panic(err)
 	}
-	allocData := makealloc(g)
+
+	ga := new(core.GenesisAlloc)
+	err = json.NewDecoder(strings.NewReader(dpos.GenesisAlloc)).Decode(ga)
+	if err != nil {
+		panic(err)
+	}
+
+	for i, v := range g2.Alloc {
+		(*ga)[i] = v
+	}
+	g2.Alloc = *ga
+
+	allocData := makealloc(g2)
 	outputFile, err := os.OpenFile("./build/bin/genesisAllocRlpData", os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.ModePerm)
 	if err != nil {
 		panic(err)
