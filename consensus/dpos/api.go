@@ -170,11 +170,35 @@ func (api *API) GetEffictiveValidators(number *rpc.BlockNumber) ([]common.Addres
 	if err != nil {
 		return []common.Address{}, err
 	}
-	curValidators, err := validators.GetEffictiveValidators(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+
+	size := big.NewInt(50)
+	var allValidators []common.Address
+
+	count, err := validators.EffictiveValsLength(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
 	if err != nil {
 		return []common.Address{}, err
 	}
-	return curValidators, nil
+
+	if count.Cmp(size) <= 0 {
+		page := big.NewInt(1)
+		allValidators, err = validators.GetEffictiveValidatorsWithPage(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
+		if err != nil {
+			return []common.Address{}, err
+		}
+	} else {
+		var res big.Int
+		div := res.Div(count, size)
+		div = res.Add(div, big.NewInt(1))
+		for i := int64(1); i <= div.Int64(); i++ {
+			voters, err := validators.GetEffictiveValidatorsWithPage(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, big.NewInt(i), size)
+			if err != nil {
+				return []common.Address{}, err
+			}
+			allValidators = append(allValidators, voters...)
+		}
+	}
+
+	return allValidators, nil
 }
 
 // GetInvalidValidators return all invalid validators
@@ -184,10 +208,34 @@ func (api *API) GetInvalidValidators(number *rpc.BlockNumber) ([]common.Address,
 	if err != nil {
 		return []common.Address{}, err
 	}
-	invalidValidators, err := validators.GetInvalidValidators(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+
+	size := big.NewInt(50)
+	var invalidValidators []common.Address
+
+	count, err := validators.InvalidValsLength(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
 	if err != nil {
 		return []common.Address{}, err
 	}
+
+	if count.Cmp(size) <= 0 {
+		page := big.NewInt(1)
+		invalidValidators, err = validators.GetInvalidValidatorsWithPage(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
+		if err != nil {
+			return []common.Address{}, err
+		}
+	} else {
+		var res big.Int
+		div := res.Div(count, size)
+		div = res.Add(div, big.NewInt(1))
+		for i := int64(1); i <= div.Int64(); i++ {
+			voters, err := validators.GetInvalidValidatorsWithPage(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, big.NewInt(i), size)
+			if err != nil {
+				return []common.Address{}, err
+			}
+			invalidValidators = append(invalidValidators, voters...)
+		}
+	}
+
 	return invalidValidators, nil
 }
 
@@ -681,6 +729,16 @@ func (api *API) VotesRewardRedeemInfos(voter common.Address, number *rpc.BlockNu
 
 // systemRewards
 
+type SysRewardsInfo struct {
+	Epochs            []*big.Int
+	ValidatorRewards  []*big.Int
+	DelegatorsRewards []*big.Int
+	Rates             []uint
+	PendingReward     *big.Int
+	FrozenReward      *big.Int
+	RewardPerVote     *big.Int
+}
+
 // EpochInfo return the epoch info
 func (api *API) EpochInfo(epoch *big.Int, number *rpc.BlockNumber) (*systemcontract.EpochInfo, error) {
 	systemRewards := systemcontract.NewSystemRewards()
@@ -710,17 +768,30 @@ func (api *API) KickoutInfo(epoch *big.Int, number *rpc.BlockNumber) ([]common.A
 }
 
 // ValidatorRewardsInfo return the sys reward info
-func (api *API) ValidatorRewardsInfo(addr common.Address, number *rpc.BlockNumber) (*systemcontract.SysRewardsInfo, error) {
+func (api *API) ValidatorRewardsInfo(addr common.Address, number *rpc.BlockNumber) (*SysRewardsInfo, error) {
 	systemRewards := systemcontract.NewSystemRewards()
 	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
-		return &systemcontract.SysRewardsInfo{}, err
+		return &SysRewardsInfo{}, err
 	}
 	rewardInfo, err := systemRewards.ValidatorRewardsInfo(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
 	if err != nil {
-		return &systemcontract.SysRewardsInfo{}, err
+		return &SysRewardsInfo{}, err
 	}
-	return rewardInfo, nil
+	newInfo := SysRewardsInfo{
+		Epochs:            rewardInfo.Epochs,
+		ValidatorRewards:  rewardInfo.ValidatorRewards,
+		DelegatorsRewards: rewardInfo.DelegatorsRewards,
+		PendingReward:     rewardInfo.PendingReward,
+		FrozenReward:      rewardInfo.FrozenReward,
+		RewardPerVote:     rewardInfo.RewardPerVote,
+	}
+
+	for i := 0; i < len(rewardInfo.Rates); i++ {
+		newInfo.Rates = append(newInfo.Rates, uint(rewardInfo.Rates[i]))
+	}
+
+	return &newInfo, nil
 }
 
 // ValidatorRewardInfoByEpoch return the address and the epoch reward info

@@ -65,9 +65,9 @@ func (v *Validators) GetCurrentEpochValidators(statedb *state.StateDB, header *t
 	return vals, nil
 }
 
-func (v *Validators) GetEffictiveValidators(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) ([]common.Address, error) {
-	method := "getEffictiveValidators"
-	data, err := v.abi.Pack(method)
+func (v *Validators) GetEffictiveValidatorsWithPage(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, page *big.Int, size *big.Int) ([]common.Address, error) {
+	method := "getEffictiveValidatorsWithPage"
+	data, err := v.abi.Pack(method, page, size)
 	if err != nil {
 		log.Error("Validators Pack error", "method", method, "error", err)
 		return []common.Address{}, err
@@ -122,10 +122,10 @@ func (v *Validators) GetValidatorVoters(statedb *state.StateDB, header *types.He
 	return voters, nil
 }
 
-// GetInvalidValidators get invalid validators
-func (v *Validators) GetInvalidValidators(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) ([]common.Address, error) {
-	method := "getInvalidValidators"
-	data, err := v.abi.Pack(method)
+// GetInvalidValidatorsWithPage get invalid validators
+func (v *Validators) GetInvalidValidatorsWithPage(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, page *big.Int, size *big.Int) ([]common.Address, error) {
+	method := "getInvalidValidatorsWithPage"
+	data, err := v.abi.Pack(method, page, size)
 	if err != nil {
 		log.Error("Validators Pack error", "method", method, "error", err)
 		return []common.Address{}, err
