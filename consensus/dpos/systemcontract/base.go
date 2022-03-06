@@ -27,8 +27,8 @@ func NewBase() *Base {
 	}
 }
 
-// GetMinDeposit `MIN_DEPOSIT`
-func (b *Base) GetMinDeposit(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) (*big.Int, error) {
+// MinDeposit `MIN_DEPOSIT`
+func (b *Base) MinDeposit(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) (*big.Int, error) {
 	method := "MIN_DEPOSIT"
 	data, err := b.abi.Pack(method)
 

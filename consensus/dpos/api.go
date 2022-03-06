@@ -22,6 +22,7 @@ import (
 	"github.com/DxChainNetwork/dxc/common/hexutil"
 	"github.com/DxChainNetwork/dxc/consensus"
 	"github.com/DxChainNetwork/dxc/consensus/dpos/systemcontract"
+	"github.com/DxChainNetwork/dxc/core/state"
 	"github.com/DxChainNetwork/dxc/core/types"
 	"github.com/DxChainNetwork/dxc/rpc"
 	"math/big"
@@ -41,10 +42,25 @@ type ProposalInfo struct {
 	Deposit     *big.Int
 	Rate        uint8
 	Details     string
+	Name        string
 	InitBlock   *big.Int
 	Guarantee   common.Address
 	UpdateBlock *big.Int
 	Status      uint8
+}
+
+func (api *API) GetHeaderAndState(number *rpc.BlockNumber) (*types.Header, *state.StateDB, error) {
+	var header *types.Header
+	if number == nil || *number == rpc.LatestBlockNumber {
+		header = api.chain.CurrentHeader()
+	} else {
+		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
+	}
+	if header == nil {
+		return nil, nil, errUnknownBlock
+	}
+	statedb, err := api.dpos.stateFn(header.Root)
+	return header, statedb, err
 }
 
 // GetSnapshot retrieves the state snapshot at a given block.
@@ -108,20 +124,11 @@ func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) 
 // GetValidator return the validator of address
 func (api *API) GetValidator(addr common.Address, number *rpc.BlockNumber) (*systemcontract.Validator, error) {
 	validators := systemcontract.NewValidators()
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	if header == nil {
-		return &systemcontract.Validator{}, errUnknownBlock
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return &systemcontract.Validator{}, err
 	}
-	val, err := validators.GetValidator(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	val, err := validators.GetValidator(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
 	if err != nil {
 		return &systemcontract.Validator{}, err
 	}
@@ -131,18 +138,11 @@ func (api *API) GetValidator(addr common.Address, number *rpc.BlockNumber) (*sys
 // GetTotalDeposit return total deposit
 func (api *API) GetTotalDeposit(number *rpc.BlockNumber) (*big.Int, error) {
 	validators := systemcontract.NewValidators()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	deposit, err := validators.TotalDeposit(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	deposit, err := validators.TotalDeposit(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
 	if err != nil {
 		return big.NewInt(0), err
 	}
@@ -152,20 +152,11 @@ func (api *API) GetTotalDeposit(number *rpc.BlockNumber) (*big.Int, error) {
 // GetCurrentEpochValidators return current epoch validators
 func (api *API) GetCurrentEpochValidators(number *rpc.BlockNumber) ([]common.Address, error) {
 	validators := systemcontract.NewValidators()
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	if header == nil {
-		return []common.Address{}, errUnknownBlock
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return []common.Address{}, err
 	}
-	curValidators, err := validators.GetCurrentEpochValidators(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	curValidators, err := validators.GetCurrentEpochValidators(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
 	if err != nil {
 		return []common.Address{}, err
 	}
@@ -175,20 +166,11 @@ func (api *API) GetCurrentEpochValidators(number *rpc.BlockNumber) ([]common.Add
 // GetEffictiveValidators return all effictive validators
 func (api *API) GetEffictiveValidators(number *rpc.BlockNumber) ([]common.Address, error) {
 	validators := systemcontract.NewValidators()
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	if header == nil {
-		return []common.Address{}, errUnknownBlock
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return []common.Address{}, err
 	}
-	curValidators, err := validators.GetEffictiveValidators(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	curValidators, err := validators.GetEffictiveValidators(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
 	if err != nil {
 		return []common.Address{}, err
 	}
@@ -198,20 +180,11 @@ func (api *API) GetEffictiveValidators(number *rpc.BlockNumber) ([]common.Addres
 // GetInvalidValidators return all invalid validators
 func (api *API) GetInvalidValidators(number *rpc.BlockNumber) ([]common.Address, error) {
 	validators := systemcontract.NewValidators()
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	if header == nil {
-		return []common.Address{}, errUnknownBlock
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return []common.Address{}, err
 	}
-	invalidValidators, err := validators.GetInvalidValidators(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	invalidValidators, err := validators.GetInvalidValidators(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
 	if err != nil {
 		return []common.Address{}, err
 	}
@@ -221,499 +194,291 @@ func (api *API) GetInvalidValidators(number *rpc.BlockNumber) ([]common.Address,
 // GetCancelQueueValidators return all canceling queue validators
 func (api *API) GetCancelQueueValidators(number *rpc.BlockNumber) ([]common.Address, error) {
 	validators := systemcontract.NewValidators()
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	if header == nil {
-		return []common.Address{}, errUnknownBlock
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return []common.Address{}, err
 	}
-	cancelingValidators, err := validators.GetCancelQueueValidators(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	cancelingValidators, err := validators.GetCancelQueueValidators(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
 	if err != nil {
 		return []common.Address{}, err
 	}
 	return cancelingValidators, nil
 }
 
-// GetUpdateRateValidators return all update rate  validators info
-func (api *API) GetUpdateRateValidators(page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]systemcontract.ValUpdateRate, error) {
+// GetValidatorVoters return the address voter
+func (api *API) GetValidatorVoters(addr common.Address, number *rpc.BlockNumber) ([]common.Address, error) {
 	validators := systemcontract.NewValidators()
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	if header == nil {
-		return []systemcontract.ValUpdateRate{}, errUnknownBlock
-	}
-	state, err := api.dpos.stateFn(header.Root)
-	if err != nil {
-		return []systemcontract.ValUpdateRate{}, err
-	}
-	if page == nil && size == nil {
-		count, err := validators.UpdateRateValidatorsLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
-		if err != nil {
-			return []systemcontract.ValUpdateRate{}, err
-		}
-		size = big.NewInt(50)
-		equal := count.Cmp(size)
-		if equal < 1 {
-			page = big.NewInt(1)
-		} else {
-			var allInfos []systemcontract.ValUpdateRate
-			var res big.Int
-			div := res.Div(count, size)
-			div = res.Add(div, big.NewInt(1))
-			for i := int64(1); i <= div.Int64(); i++ {
-				vals, err := validators.UpdateRateValidators(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, big.NewInt(i), size)
-				if err != nil {
-					return []systemcontract.ValUpdateRate{}, err
-				}
-				allInfos = append(allInfos, vals...)
-			}
-			return allInfos, nil
-
-		}
-	}
-	vals, err := validators.UpdateRateValidators(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
-	if err != nil {
-		return []systemcontract.ValUpdateRate{}, err
-	}
-	return vals, nil
-}
-
-// GetValidatorUpdateRate return the address update rate info
-func (api *API) GetValidatorUpdateRate(addr common.Address, number *rpc.BlockNumber) (uint8, error) {
-	validators := systemcontract.NewValidators()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
-	if err != nil {
-		return uint8(0), err
-	}
-	rate, err := validators.ValidatorUpdateRate(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
-	if err != nil {
-		return uint8(0), err
-	}
-	return rate, nil
-}
-
-// GetVoters return the address voter
-func (api *API) GetVoters(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]common.Address, error) {
-	validators := systemcontract.NewValidators()
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	if header == nil {
-		return []common.Address{}, errUnknownBlock
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return []common.Address{}, err
 	}
-	if page == nil && size == nil {
-		count, err := validators.ValidatorToVotersLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+
+	size := big.NewInt(50)
+	var allVoters []common.Address
+
+	count, err := validators.ValidatorVotersLength(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return []common.Address{}, err
+	}
+
+	if count.Cmp(size) <= 0 {
+		page := big.NewInt(1)
+		allVoters, err = validators.GetValidatorVoters(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
 		if err != nil {
 			return []common.Address{}, err
 		}
-		size = big.NewInt(50)
-		equal := count.Cmp(size)
-		if equal < 1 {
-			page = big.NewInt(1)
-		} else {
-			var allVoters []common.Address
-			var res big.Int
-			div := res.Div(count, size)
-			div = res.Add(div, big.NewInt(1))
-			for i := int64(1); i <= div.Int64(); i++ {
-				voters, err := validators.GetVoters(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
-				if err != nil {
-					return []common.Address{}, err
-				}
-				allVoters = append(allVoters, voters...)
+	} else {
+		var res big.Int
+		div := res.Div(count, size)
+		div = res.Add(div, big.NewInt(1))
+		for i := int64(1); i <= div.Int64(); i++ {
+			voters, err := validators.GetValidatorVoters(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
+			if err != nil {
+				return []common.Address{}, err
 			}
-			return allVoters, nil
-
+			allVoters = append(allVoters, voters...)
 		}
 	}
-	voters, err := validators.GetVoters(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
-	if err != nil {
-		return []common.Address{}, err
-	}
-	return voters, nil
+
+	return allVoters, nil
 }
 
-// GetEffictiveValsLength return effictive validators length
-func (api *API) GetEffictiveValsLength(number *rpc.BlockNumber) (*big.Int, error) {
+// EffictiveValsLength return effictive validators length
+func (api *API) EffictiveValsLength(number *rpc.BlockNumber) (*big.Int, error) {
 	validators := systemcontract.NewValidators()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	count, err := validators.EffictiveValsLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	count, err := validators.EffictiveValsLength(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
 	if err != nil {
 		return big.NewInt(0), err
 	}
 	return count, nil
 }
 
-// GetInvalidValsLength return invalid validators length
-func (api *API) GetInvalidValsLength(number *rpc.BlockNumber) (*big.Int, error) {
+// InvalidValsLength return invalid validators length
+func (api *API) InvalidValsLength(number *rpc.BlockNumber) (*big.Int, error) {
 	validators := systemcontract.NewValidators()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	count, err := validators.InvalidValsLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	count, err := validators.InvalidValsLength(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
 	if err != nil {
 		return big.NewInt(0), err
 	}
 	return count, nil
 }
 
-// GetCancelQueueValidatorsLength return cancel queue validators length
-func (api *API) GetCancelQueueValidatorsLength(number *rpc.BlockNumber) (*big.Int, error) {
+// CancelQueueValidatorsLength return cancel queue validators length
+func (api *API) CancelQueueValidatorsLength(number *rpc.BlockNumber) (*big.Int, error) {
 	validators := systemcontract.NewValidators()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	count, err := validators.CancelQueueValidatorsLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	count, err := validators.CancelQueueValidatorsLength(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
 	if err != nil {
 		return big.NewInt(0), err
 	}
 	return count, nil
 }
 
-// GetUpdateRateValidatorsLength return update rate validators length
-func (api *API) GetUpdateRateValidatorsLength(number *rpc.BlockNumber) (*big.Int, error) {
+// ValidatorVotersLength return the validator voters length
+func (api *API) ValidatorVotersLength(addr common.Address, number *rpc.BlockNumber) (*big.Int, error) {
 	validators := systemcontract.NewValidators()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	count, err := validators.UpdateRateValidatorsLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	count, err := validators.ValidatorVotersLength(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
 	if err != nil {
 		return big.NewInt(0), err
 	}
 	return count, nil
 }
 
-// GetValidatorToVotersLength return the validator voters length
-func (api *API) GetValidatorToVotersLength(addr common.Address, number *rpc.BlockNumber) (*big.Int, error) {
+// IsEffictiveValidator return the address is validator
+func (api *API) IsEffictiveValidator(addr common.Address, number *rpc.BlockNumber) (bool, error) {
 	validators := systemcontract.NewValidators()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
-	if err != nil {
-		return big.NewInt(0), err
-	}
-	count, err := validators.ValidatorToVotersLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
-	if err != nil {
-		return big.NewInt(0), err
-	}
-	return count, nil
-}
-
-// GetIsEffictiveValidator return the address is validator
-func (api *API) GetIsEffictiveValidator(addr common.Address, number *rpc.BlockNumber) (bool, error) {
-	validators := systemcontract.NewValidators()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return false, err
 	}
-	val, err := validators.IsEffictiveValidator(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	val, err := validators.IsEffictiveValidator(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
 	if err != nil {
 		return false, err
 	}
 	return val, nil
 }
 
-// GetMinDeposit return the minimum stake amount
-func (api *API) GetMinDeposit(number *rpc.BlockNumber) (*big.Int, error) {
+// MinDeposit return the minimum stake amount
+func (api *API) MinDeposit(number *rpc.BlockNumber) (*big.Int, error) {
 	base := systemcontract.NewBase()
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	if header == nil {
-		return big.NewInt(0), errUnknownBlock
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	minDeposit, err := base.GetMinDeposit(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	minDeposit, err := base.MinDeposit(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
 	if err != nil {
 		return big.NewInt(0), err
 	}
 	return minDeposit, nil
-
 }
 
 // Proposals
 
 // GetAddressProposalSets return the address proposal id
-func (api *API) GetAddressProposalSets(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]string, error) {
+func (api *API) GetAddressProposalSets(addr common.Address, number *rpc.BlockNumber) ([]string, error) {
 	proposals := systemcontract.NewProposals()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return []string{}, err
 	}
-	if page == nil && size == nil {
-		count, err := proposals.AddressProposalCount(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	count, err := proposals.AddressProposalCount(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return []string{}, err
+	}
+
+	size := big.NewInt(50)
+	var allSets [][4]byte
+
+	if count.Cmp(size) <= 0 {
+		page := big.NewInt(1)
+		allSets, err = proposals.AddressProposalSets(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
 		if err != nil {
 			return []string{}, err
 		}
-		size = big.NewInt(50)
-		equal := count.Cmp(size)
-		if equal < 1 {
-			page = big.NewInt(1)
-
-		} else {
-			var allSets [][4]byte
-			var res big.Int
-			div := res.Div(count, size)
-			div = res.Add(div, big.NewInt(1))
-			for i := int64(1); i <= div.Int64(); i++ {
-				proposalIds, err := proposals.AddressProposalSets(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
-				if err != nil {
-					return []string{}, err
-				}
-				allSets = append(allSets, proposalIds...)
+	} else {
+		var res big.Int
+		div := res.Div(count, size)
+		div = res.Add(div, big.NewInt(1))
+		for i := int64(1); i <= div.Int64(); i++ {
+			proposalIds, err := proposals.AddressProposalSets(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
+			if err != nil {
+				return []string{}, err
 			}
-			var newProposalIds []string
-			for i := 0; i < len(allSets); i++ {
-				id := hexutil.Encode(allSets[i][0:len(allSets[i])])
-				newProposalIds = append(newProposalIds, id)
-			}
-			return newProposalIds, nil
+			allSets = append(allSets, proposalIds...)
 		}
 	}
-	proposalIds, err := proposals.AddressProposalSets(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
-	if err != nil {
-		return []string{}, err
-	}
-	var newProposalIds []string
-	for i := 0; i < len(proposalIds); i++ {
-		id := hexutil.Encode(proposalIds[i][0:len(proposalIds[i])])
+
+	newProposalIds := []string{}
+	for i := 0; i < len(allSets); i++ {
+		id := hexutil.Encode(allSets[i][0:len(allSets[i])])
 		newProposalIds = append(newProposalIds, id)
 	}
 	return newProposalIds, nil
 }
 
 // GetAllProposalSets return all proposals id
-func (api *API) GetAllProposalSets(page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]string, error) {
+func (api *API) GetAllProposalSets(number *rpc.BlockNumber) ([]string, error) {
 	proposals := systemcontract.NewProposals()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return []string{}, err
 	}
-	if page == nil && size == nil {
-		count, err := proposals.ProposalCount(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+
+	count, err := proposals.ProposalCount(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	if err != nil {
+		return []string{}, err
+	}
+
+	size := big.NewInt(50)
+	var allSets [][4]byte
+
+	if count.Cmp(size) <= 0 {
+		page := big.NewInt(1)
+		allSets, err = proposals.AllProposalSets(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
 		if err != nil {
 			return []string{}, err
 		}
-		size = big.NewInt(50)
-		equal := count.Cmp(size)
-		if equal < 1 {
-			page = big.NewInt(1)
-
-		} else {
-			var allSets [][4]byte
-			var res big.Int
-			div := res.Div(count, size)
-			div = res.Add(div, big.NewInt(1))
-			for i := int64(1); i <= div.Int64(); i++ {
-				proposalIds, err := proposals.AllProposalSets(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, big.NewInt(i), size)
-				if err != nil {
-					return []string{}, err
-				}
-				allSets = append(allSets, proposalIds...)
+	} else {
+		var res big.Int
+		div := res.Div(count, size)
+		div = res.Add(div, big.NewInt(1))
+		for i := int64(1); i <= div.Int64(); i++ {
+			proposalIds, err := proposals.AllProposalSets(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, big.NewInt(i), size)
+			if err != nil {
+				return []string{}, err
 			}
-			var newProposalIds []string
-			for i := 0; i < len(allSets); i++ {
-				id := hexutil.Encode(allSets[i][0:len(allSets[i])])
-				newProposalIds = append(newProposalIds, id)
-			}
-			return newProposalIds, nil
+			allSets = append(allSets, proposalIds...)
 		}
 	}
-	proposalIds, err := proposals.AllProposalSets(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
-	if err != nil {
-		return []string{}, err
-	}
-	var newProposalIds []string
-	for i := 0; i < len(proposalIds); i++ {
-		id := hexutil.Encode(proposalIds[i][0:len(proposalIds[i])])
+
+	newProposalIds := []string{}
+	for i := 0; i < len(allSets); i++ {
+		id := hexutil.Encode(allSets[i][0:len(allSets[i])])
 		newProposalIds = append(newProposalIds, id)
 	}
 	return newProposalIds, nil
+
 }
 
 // GetAllProposals return all proposals
-func (api *API) GetAllProposals(page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]ProposalInfo, error) {
+func (api *API) GetAllProposals(number *rpc.BlockNumber) ([]ProposalInfo, error) {
 	proposals := systemcontract.NewProposals()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return []ProposalInfo{}, err
 	}
-	if page == nil && size == nil {
-		count, err := proposals.ProposalCount(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+
+	count, err := proposals.ProposalCount(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	if err != nil {
+		return []ProposalInfo{}, err
+	}
+
+	size := big.NewInt(50)
+	var allProposals []systemcontract.ProposalInfo
+
+	if count.Cmp(size) <= 0 {
+		page := big.NewInt(1)
+		allProposals, err = proposals.AllProposals(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
 		if err != nil {
 			return []ProposalInfo{}, err
 		}
-		size = big.NewInt(50)
-		equal := count.Cmp(size)
-		if equal < 1 {
-			page = big.NewInt(1)
-
-		} else {
-			var allProposals []systemcontract.ProposalInfo
-			var res big.Int
-			div := res.Div(count, size)
-			div = res.Add(div, big.NewInt(1))
-			for i := int64(1); i <= div.Int64(); i++ {
-				proposalIds, err := proposals.AllProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, big.NewInt(i), size)
-				if err != nil {
-					return []ProposalInfo{}, err
-				}
-				allProposals = append(allProposals, proposalIds...)
+	} else {
+		var res big.Int
+		div := res.Div(count, size)
+		div = res.Add(div, big.NewInt(1))
+		for i := int64(1); i <= div.Int64(); i++ {
+			proposals, err := proposals.AllProposals(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, big.NewInt(i), size)
+			if err != nil {
+				return []ProposalInfo{}, err
 			}
-			var newProposals []ProposalInfo
-			for i := 0; i < len(allProposals); i++ {
-				detail := ProposalInfo{
-					Id:          hexutil.Encode(allProposals[i].Id[0:len(allProposals[i].Id)]),
-					Proposer:    allProposals[i].Proposer,
-					UpdateBlock: allProposals[i].UpdateBlock,
-					PType:       allProposals[i].PType,
-					Guarantee:   allProposals[i].Guarantee,
-					Deposit:     allProposals[i].Deposit,
-					Details:     allProposals[i].Details,
-					InitBlock:   allProposals[i].InitBlock,
-					Rate:        allProposals[i].Rate,
-					Status:      allProposals[i].Status,
-				}
-				newProposals = append(newProposals, detail)
-			}
+			allProposals = append(allProposals, proposals...)
 		}
 	}
-	proposalInfos, err := proposals.AllProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, page, size)
-	if err != nil {
-		return []ProposalInfo{}, err
-	}
-	var newProposals []ProposalInfo
-	for i := 0; i < len(proposalInfos); i++ {
+
+	newProposals := []ProposalInfo{}
+	for i := 0; i < len(allProposals); i++ {
 		detail := ProposalInfo{
-			Id:          hexutil.Encode(proposalInfos[i].Id[0:len(proposalInfos[i].Id)]),
-			Proposer:    proposalInfos[i].Proposer,
-			UpdateBlock: proposalInfos[i].UpdateBlock,
-			PType:       proposalInfos[i].PType,
-			Guarantee:   proposalInfos[i].Guarantee,
-			Deposit:     proposalInfos[i].Deposit,
-			Details:     proposalInfos[i].Details,
-			InitBlock:   proposalInfos[i].InitBlock,
-			Rate:        proposalInfos[i].Rate,
-			Status:      proposalInfos[i].Status,
+			Id:          hexutil.Encode(allProposals[i].Id[0:len(allProposals[i].Id)]),
+			Proposer:    allProposals[i].Proposer,
+			UpdateBlock: allProposals[i].UpdateBlock,
+			PType:       allProposals[i].PType,
+			Guarantee:   allProposals[i].Guarantee,
+			Deposit:     allProposals[i].Deposit,
+			Details:     allProposals[i].Details,
+			Name:        allProposals[i].Name,
+			InitBlock:   allProposals[i].InitBlock,
+			Rate:        allProposals[i].Rate,
+			Status:      allProposals[i].Status,
 		}
 		newProposals = append(newProposals, detail)
 	}
 	return newProposals, nil
+
 }
 
 // GetProposal return the proposal of id
 func (api *API) GetProposal(id string, number *rpc.BlockNumber) (*ProposalInfo, error) {
 	proposals := systemcontract.NewProposals()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return &ProposalInfo{}, err
 	}
-	proposalInfo, err := proposals.GetProposal(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, id)
+	proposalInfo, err := proposals.GetProposal(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, id)
 	if err != nil {
 		return &ProposalInfo{}, err
 	}
@@ -725,6 +490,7 @@ func (api *API) GetProposal(id string, number *rpc.BlockNumber) (*ProposalInfo, 
 		Guarantee:   proposalInfo.Guarantee,
 		Deposit:     proposalInfo.Deposit,
 		Details:     proposalInfo.Details,
+		Name:        proposalInfo.Name,
 		InitBlock:   proposalInfo.InitBlock,
 		Rate:        proposalInfo.Rate,
 		Status:      proposalInfo.Status,
@@ -733,76 +499,54 @@ func (api *API) GetProposal(id string, number *rpc.BlockNumber) (*ProposalInfo, 
 }
 
 // GetAddressProposals return the address proposals
-func (api *API) GetAddressProposals(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]ProposalInfo, error) {
+func (api *API) GetAddressProposals(addr common.Address, number *rpc.BlockNumber) ([]ProposalInfo, error) {
 	proposals := systemcontract.NewProposals()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return []ProposalInfo{}, err
 	}
-	if page == nil && size == nil {
-		count, err := proposals.AddressProposalCount(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+
+	var allProposals []systemcontract.ProposalInfo
+	size := big.NewInt(50)
+
+	count, err := proposals.AddressProposalCount(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return []ProposalInfo{}, err
+	}
+
+	if count.Cmp(size) <= 0 {
+		page := big.NewInt(1)
+		allProposals, err = proposals.AddressProposals(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
 		if err != nil {
 			return []ProposalInfo{}, err
 		}
-		size = big.NewInt(50)
-		equal := count.Cmp(size)
-		if equal < 1 {
-			page = big.NewInt(1)
-
-		} else {
-			var allProposals []systemcontract.ProposalInfo
-			var res big.Int
-			div := res.Div(count, size)
-			div = res.Add(div, big.NewInt(1))
-			for i := int64(1); i <= div.Int64(); i++ {
-				proposalIds, err := proposals.AddressProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
-				if err != nil {
-					return []ProposalInfo{}, err
-				}
-				allProposals = append(allProposals, proposalIds...)
+	} else {
+		var res big.Int
+		div := res.Div(count, size)
+		div = res.Add(div, big.NewInt(1))
+		for i := int64(1); i <= div.Int64(); i++ {
+			proposalIds, err := proposals.AddressProposals(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
+			if err != nil {
+				return []ProposalInfo{}, err
 			}
-			var newProposals []ProposalInfo
-			for i := 0; i < len(allProposals); i++ {
-				detail := ProposalInfo{
-					Id:          hexutil.Encode(allProposals[i].Id[0:len(allProposals[i].Id)]),
-					Proposer:    allProposals[i].Proposer,
-					UpdateBlock: allProposals[i].UpdateBlock,
-					PType:       allProposals[i].PType,
-					Guarantee:   allProposals[i].Guarantee,
-					Deposit:     allProposals[i].Deposit,
-					Details:     allProposals[i].Details,
-					InitBlock:   allProposals[i].InitBlock,
-					Rate:        allProposals[i].Rate,
-					Status:      allProposals[i].Status,
-				}
-				newProposals = append(newProposals, detail)
-			}
+			allProposals = append(allProposals, proposalIds...)
 		}
 	}
-	proposalInfos, err := proposals.AddressProposals(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
-	if err != nil {
-		return []ProposalInfo{}, err
-	}
+
 	var newProposals []ProposalInfo
-	for i := 0; i < len(proposalInfos); i++ {
+	for i := 0; i < len(allProposals); i++ {
 		detail := ProposalInfo{
-			Id:          hexutil.Encode(proposalInfos[i].Id[0:len(proposalInfos[i].Id)]),
-			Proposer:    proposalInfos[i].Proposer,
-			UpdateBlock: proposalInfos[i].UpdateBlock,
-			PType:       proposalInfos[i].PType,
-			Guarantee:   proposalInfos[i].Guarantee,
-			Deposit:     proposalInfos[i].Deposit,
-			Details:     proposalInfos[i].Details,
-			InitBlock:   proposalInfos[i].InitBlock,
-			Rate:        proposalInfos[i].Rate,
-			Status:      proposalInfos[i].Status,
+			Id:          hexutil.Encode(allProposals[i].Id[0:len(allProposals[i].Id)]),
+			Proposer:    allProposals[i].Proposer,
+			UpdateBlock: allProposals[i].UpdateBlock,
+			PType:       allProposals[i].PType,
+			Guarantee:   allProposals[i].Guarantee,
+			Deposit:     allProposals[i].Deposit,
+			Details:     allProposals[i].Details,
+			Name:        allProposals[i].Name,
+			InitBlock:   allProposals[i].InitBlock,
+			Rate:        allProposals[i].Rate,
+			Status:      allProposals[i].Status,
 		}
 		newProposals = append(newProposals, detail)
 	}
@@ -812,18 +556,11 @@ func (api *API) GetAddressProposals(addr common.Address, page *big.Int, size *bi
 // GetProposalCount return all proposal count
 func (api *API) GetProposalCount(number *rpc.BlockNumber) (*big.Int, error) {
 	proposals := systemcontract.NewProposals()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	count, err := proposals.ProposalCount(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	count, err := proposals.ProposalCount(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
 	if err != nil {
 		return big.NewInt(0), err
 	}
@@ -833,18 +570,11 @@ func (api *API) GetProposalCount(number *rpc.BlockNumber) (*big.Int, error) {
 // GetAddressProposalCount return the address proposal count
 func (api *API) GetAddressProposalCount(addr common.Address, number *rpc.BlockNumber) (*big.Int, error) {
 	proposals := systemcontract.NewProposals()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	count, err := proposals.AddressProposalCount(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	count, err := proposals.AddressProposalCount(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
 	if err != nil {
 		return big.NewInt(0), err
 	}
@@ -853,334 +583,168 @@ func (api *API) GetAddressProposalCount(addr common.Address, number *rpc.BlockNu
 
 // NodeVotes
 
-// GetPendingVoteReward return the voter vote the validator rewards
-func (api *API) GetPendingVoteReward(val common.Address, voter common.Address, number *rpc.BlockNumber) (*big.Int, error) {
+// PendingVoteReward return the voter vote the validator rewards
+func (api *API) PendingVoteReward(val common.Address, voter common.Address, number *rpc.BlockNumber) (*big.Int, error) {
 	nodeVotes := systemcontract.NewNodeVotes()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	value, err := nodeVotes.PendingVoteReward(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, val, voter)
+	value, err := nodeVotes.PendingVoteReward(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, val, voter)
 	if err != nil {
 		return big.NewInt(0), err
 	}
 	return value, nil
 }
 
-// GetPendingRedeem return the voter redeem validators voters
-func (api *API) GetPendingRedeem(addr common.Address, number *rpc.BlockNumber) (*big.Int, error) {
+// PendingVoteRedeem return the voter redeem validators voters
+func (api *API) PendingVoteRedeem(val common.Address, voter common.Address, number *rpc.BlockNumber) (*big.Int, error) {
 	nodeVotes := systemcontract.NewNodeVotes()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	value, err := nodeVotes.PendingRedeem(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	value, err := nodeVotes.PendingVoteRedeem(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, val, voter)
 	if err != nil {
 		return big.NewInt(0), err
 	}
 	return value, nil
 }
 
-// GetVoteListLength return the voter vote list length
-func (api *API) GetVoteListLength(addr common.Address, number *rpc.BlockNumber) (*big.Int, error) {
+// VoteListLength return the voter vote list length
+func (api *API) VoteListLength(addr common.Address, number *rpc.BlockNumber) (*big.Int, error) {
 	nodeVotes := systemcontract.NewNodeVotes()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	count, err := nodeVotes.VoteListLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	count, err := nodeVotes.VoteListLength(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
 	if err != nil {
 		return big.NewInt(0), err
 	}
 	return count, nil
 }
 
-// GetCancelVoteValidatorListLength return the voter cancel vote list length
-func (api *API) GetCancelVoteValidatorListLength(addr common.Address, number *rpc.BlockNumber) (*big.Int, error) {
+// VotesRewardRedeemInfo votesRewardRedeemInfo
+func (api *API) VotesRewardRedeemInfo(val common.Address, voter common.Address, number *rpc.BlockNumber) (*systemcontract.VotesRewardRedeemInfo, error) {
 	nodeVotes := systemcontract.NewNodeVotes()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
-		return big.NewInt(0), err
+		return &systemcontract.VotesRewardRedeemInfo{}, err
 	}
-	count, err := nodeVotes.CancelVoteValidatorListLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+
+	info, err := nodeVotes.VotesRewardRedeemInfo(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, val, voter)
 	if err != nil {
-		return big.NewInt(0), err
+		return &systemcontract.VotesRewardRedeemInfo{}, err
 	}
-	return count, nil
+	return info, nil
 }
 
-// GetCancelVoteValidatorList return the address cancel vote validator list
-func (api *API) GetCancelVoteValidatorList(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]common.Address, error) {
+// VotesRewardRedeemInfos nodevotes.VotesRewardRedeemInfos
+func (api *API) VotesRewardRedeemInfos(voter common.Address, number *rpc.BlockNumber) ([]systemcontract.VotesRewardRedeemInfo, error) {
 	nodeVotes := systemcontract.NewNodeVotes()
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	if header == nil {
-		return []common.Address{}, errUnknownBlock
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
-		return []common.Address{}, err
+		return []systemcontract.VotesRewardRedeemInfo{}, err
 	}
-	if page == nil && size == nil {
-		count, err := nodeVotes.CancelVoteValidatorListLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+
+	size := big.NewInt(50)
+	var allInfos []systemcontract.VotesRewardRedeemInfo
+
+	count, err := nodeVotes.VoteListLength(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, voter)
+	if err != nil {
+		return []systemcontract.VotesRewardRedeemInfo{}, err
+	}
+
+	if count.Cmp(size) <= 0 {
+		page := big.NewInt(1)
+		allInfos, err = nodeVotes.VotesRewardRedeemInfoWithPage(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, voter, page, size)
 		if err != nil {
-			return []common.Address{}, err
+			return []systemcontract.VotesRewardRedeemInfo{}, err
 		}
-		size = big.NewInt(50)
-		equal := count.Cmp(size)
-		if equal < 1 {
-			page = big.NewInt(1)
-
-		} else {
-			var allVoters []common.Address
-			var res big.Int
-			div := res.Div(count, size)
-			div = res.Add(div, big.NewInt(1))
-			for i := int64(1); i <= div.Int64(); i++ {
-				voters, err := nodeVotes.CancelVoteValidatorList(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
-				if err != nil {
-					return []common.Address{}, err
-				}
-				allVoters = append(allVoters, voters...)
-			}
-			return allVoters, nil
-
-		}
-	}
-	vals, err := nodeVotes.CancelVoteValidatorList(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
-	if err != nil {
-		return []common.Address{}, err
-	}
-	return vals, nil
-}
-
-// GetVoteList return the voter vote list
-func (api *API) GetVoteList(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]systemcontract.VoteInfo, error) {
-	nodeVotes := systemcontract.NewNodeVotes()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
 	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
-	if err != nil {
-		return []systemcontract.VoteInfo{}, err
-	}
-	if page == nil && size == nil {
-		count, err := nodeVotes.VoteListLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
-		if err != nil {
-			return []systemcontract.VoteInfo{}, err
-		}
-		size = big.NewInt(50)
-		equal := count.Cmp(size)
-		if equal < 1 {
-			page = big.NewInt(1)
-
-		} else {
-			var allVoteList []systemcontract.VoteInfo
-			var res big.Int
-			div := res.Div(count, size)
-			div = res.Add(div, big.NewInt(1))
-			for i := int64(1); i <= div.Int64(); i++ {
-				voteInfo, err := nodeVotes.VoteList(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
-				if err != nil {
-					return []systemcontract.VoteInfo{}, err
-				}
-				allVoteList = append(allVoteList, voteInfo...)
+		var res big.Int
+		div := res.Div(count, size)
+		div = res.Add(div, big.NewInt(1))
+		for i := int64(1); i <= div.Int64(); i++ {
+			infos, err := nodeVotes.VotesRewardRedeemInfoWithPage(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, voter, big.NewInt(i), size)
+			if err != nil {
+				return []systemcontract.VotesRewardRedeemInfo{}, err
 			}
-			return allVoteList, nil
-
+			allInfos = append(allInfos, infos...)
 		}
+		return allInfos, nil
 	}
-	voteLists, err := nodeVotes.VoteList(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
-	if err != nil {
-		return []systemcontract.VoteInfo{}, err
-	}
-	return voteLists, nil
-}
 
-// GetRedeemInfo return the voter redeem info
-func (api *API) GetRedeemInfo(addr common.Address, page *big.Int, size *big.Int, number *rpc.BlockNumber) ([]systemcontract.RedeemVoterInfo, error) {
-	nodeVotes := systemcontract.NewNodeVotes()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
-	if err != nil {
-		return []systemcontract.RedeemVoterInfo{}, err
-	}
-	if page == nil && size == nil {
-		count, err := nodeVotes.CancelVoteValidatorListLength(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
-		if err != nil {
-			return []systemcontract.RedeemVoterInfo{}, err
-		}
-		size = big.NewInt(50)
-		equal := count.Cmp(size)
-		if equal < 1 {
-			page = big.NewInt(1)
-
-		} else {
-			var allRedeemInfo []systemcontract.RedeemVoterInfo
-			var res big.Int
-			div := res.Div(count, size)
-			div = res.Add(div, big.NewInt(1))
-			for i := int64(1); i <= div.Int64(); i++ {
-				redeemInfo, err := nodeVotes.RedeemInfo(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, big.NewInt(i), size)
-				if err != nil {
-					return []systemcontract.RedeemVoterInfo{}, err
-				}
-				allRedeemInfo = append(allRedeemInfo, redeemInfo...)
-			}
-			return allRedeemInfo, nil
-
-		}
-	}
-	redeemInfos, err := nodeVotes.RedeemInfo(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, page, size)
-	if err != nil {
-		return []systemcontract.RedeemVoterInfo{}, err
-	}
-	return redeemInfos, nil
+	return allInfos, nil
 }
 
 // systemRewards
 
-// GetEpochInfo return the epoch info
-func (api *API) GetEpochInfo(epoch *big.Int, number *rpc.BlockNumber) (*systemcontract.EpochInfo, error) {
+// EpochInfo return the epoch info
+func (api *API) EpochInfo(epoch *big.Int, number *rpc.BlockNumber) (*systemcontract.EpochInfo, error) {
 	systemRewards := systemcontract.NewSystemRewards()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return &systemcontract.EpochInfo{}, err
 	}
-	epochInfo, err := systemRewards.GetEpochInfo(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, epoch)
+	epochInfo, err := systemRewards.GetEpochInfo(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, epoch)
 	if err != nil {
 		return &systemcontract.EpochInfo{}, err
 	}
 	return epochInfo, nil
 }
 
-// GetSysRewards return the sys reward info
-func (api *API) GetSysRewards(addr common.Address, number *rpc.BlockNumber) (*systemcontract.SysRewards, error) {
+// KickoutInfo return kickout addresses in epoch
+func (api *API) KickoutInfo(epoch *big.Int, number *rpc.BlockNumber) ([]common.Address, error) {
 	systemRewards := systemcontract.NewSystemRewards()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
-		return &systemcontract.SysRewards{}, err
+		return []common.Address{}, err
 	}
-	rewardInfo, err := systemRewards.GetSysRewards(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	vals, err := systemRewards.KickoutInfo(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, epoch)
 	if err != nil {
-		return &systemcontract.SysRewards{}, err
+		return []common.Address{}, err
+	}
+	return vals, nil
+}
+
+// ValidatorRewardsInfo return the sys reward info
+func (api *API) ValidatorRewardsInfo(addr common.Address, number *rpc.BlockNumber) (*systemcontract.SysRewardsInfo, error) {
+	systemRewards := systemcontract.NewSystemRewards()
+	header, statedb, err := api.GetHeaderAndState(number)
+	if err != nil {
+		return &systemcontract.SysRewardsInfo{}, err
+	}
+	rewardInfo, err := systemRewards.ValidatorRewardsInfo(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	if err != nil {
+		return &systemcontract.SysRewardsInfo{}, err
 	}
 	return rewardInfo, nil
 }
 
-// GetValRewardEpochs return the address reward epochs
-func (api *API) GetValRewardEpochs(addr common.Address, number *rpc.BlockNumber) ([]*big.Int, error) {
+// ValidatorRewardInfoByEpoch return the address and the epoch reward info
+func (api *API) ValidatorRewardInfoByEpoch(addr common.Address, epoch *big.Int, number *rpc.BlockNumber) (*systemcontract.Reward, error) {
 	systemRewards := systemcontract.NewSystemRewards()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
-	if err != nil {
-		return []*big.Int{}, err
-	}
-	epochs, err := systemRewards.GetValRewardEpochs(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
-	if err != nil {
-		return []*big.Int{}, err
-	}
-	return epochs, nil
-}
-
-// GetValRewardInfoByEpoch return the address and the epoch reward info
-func (api *API) GetValRewardInfoByEpoch(addr common.Address, epoch *big.Int, number *rpc.BlockNumber) (*systemcontract.Reward, error) {
-	systemRewards := systemcontract.NewSystemRewards()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return &systemcontract.Reward{}, err
 	}
-	rewards, err := systemRewards.GetValRewardInfoByEpoch(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, epoch)
+	rewards, err := systemRewards.GetValRewardInfoByEpoch(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, epoch)
 	if err != nil {
 		return &systemcontract.Reward{}, err
 	}
 	return rewards, nil
 }
 
-// GetPendingValReward return the address reward
-func (api *API) GetPendingValReward(addr common.Address, number *rpc.BlockNumber) (map[string]*big.Int, error) {
+// PendingValidatorReward return the address reward
+func (api *API) PendingValidatorReward(addr common.Address, number *rpc.BlockNumber) (map[string]*big.Int, error) {
 	systemRewards := systemcontract.NewSystemRewards()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return map[string]*big.Int{}, err
 	}
-	avaliable, frozen, err := systemRewards.PendingValReward(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
+	avaliable, frozen, err := systemRewards.PendingValidatorReward(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
 	if err != nil {
 		return map[string]*big.Int{}, err
 	}
@@ -1190,45 +754,14 @@ func (api *API) GetPendingValReward(addr common.Address, number *rpc.BlockNumber
 	return result, nil
 }
 
-// GetPendingVoterReward return the address reward
-func (api *API) GetPendingVoterReward(addr common.Address, number *rpc.BlockNumber) (map[string]*big.Int, error) {
-	systemRewards := systemcontract.NewSystemRewards()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
-	if err != nil {
-		return map[string]*big.Int{}, err
-	}
-	sumReward, accReward, err := systemRewards.PendingVoterReward(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr)
-	if err != nil {
-		return map[string]*big.Int{}, err
-	}
-	result := make(map[string]*big.Int)
-	result["sumReward"] = sumReward
-	result["accReward"] = accReward
-	return result, nil
-}
-
 // PunishInfo punishInfo function of systemRewards contract
 func (api *API) PunishInfo(addr common.Address, epoch *big.Int, number *rpc.BlockNumber) (*big.Int, error) {
 	systemRewards := systemcontract.NewSystemRewards()
-	var header *types.Header
-	header = api.chain.CurrentHeader()
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	state, err := api.dpos.stateFn(header.Root)
+	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
 		return big.NewInt(0), err
 	}
-	punishCount, err := systemRewards.PunishInfo(state, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, epoch)
+	punishCount, err := systemRewards.PunishInfo(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, epoch)
 	if err != nil {
 		return big.NewInt(0), err
 	}
