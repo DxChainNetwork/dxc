@@ -2,6 +2,7 @@ package dpos
 
 import (
 	"github.com/DxChainNetwork/dxc/common"
+	"github.com/DxChainNetwork/dxc/consensus/dpos/systemcontract"
 	"testing"
 )
 
@@ -10,4 +11,10 @@ func TestCalcSlotOfDevMappingKey(t *testing.T) {
 	slot := calcSlotOfDevMappingKey(addr)
 	t.Log(slot.String())
 	// want: 0xb314f101a00aa0d8cc6704cc6dd1e9dd7551ec98c9df52079c192c560ba66c4a
+}
+
+func TestMigrateAddrBalances(t *testing.T) {
+	addrs, bals := systemcontract.InitMigrateAddrBalance()
+	t.Log(addrs)
+	t.Log(bals)
 }

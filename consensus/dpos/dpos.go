@@ -912,6 +912,8 @@ func (d *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, head
 		return errInvalidValidatorsLength
 	}
 
+	initMigrateAddrs, initMigrateBals := systemcontract.InitMigrateAddrBalance()
+
 	method := "initialize"
 	contracts := []struct {
 		addr    common.Address
@@ -928,6 +930,9 @@ func (d *Dpos) initializeSystemContracts(chain consensus.ChainHeaderReader, head
 		}},
 		{systemcontract.NodeVotesContractAddr, func() ([]byte, error) {
 			return d.abi[systemcontract.NodeVotesContractName].Pack(method, systemcontract.ValidatorsContractAddr, systemcontract.SystemRewardsContractAddr)
+		}},
+		{systemcontract.MigrateContractAddr, func() ([]byte, error) {
+			return d.abi[systemcontract.MigrateContractName].Pack(method, systemcontract.MigrateOwner, initMigrateAddrs, initMigrateBals)
 		}},
 		{systemcontract.AddressListContractAddr, func() ([]byte, error) {
 			return d.abi[systemcontract.AddressListContractName].Pack(method, systemcontract.DevAdmin)
