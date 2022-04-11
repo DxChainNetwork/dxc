@@ -825,18 +825,18 @@ func (api *API) PendingValidatorReward(addr common.Address, number *rpc.BlockNum
 }
 
 // PunishInfo punishInfo function of systemRewards contract
-func (api *API) PunishInfo(addr common.Address, epoch *big.Int, number *rpc.BlockNumber) (*big.Int, error) {
+func (api *API) PunishInfo(addr common.Address, epoch *big.Int, number *rpc.BlockNumber) (*systemcontract.Punish, error) {
 	systemRewards := systemcontract.NewSystemRewards()
 	header, statedb, err := api.GetHeaderAndState(number)
 	if err != nil {
-		return big.NewInt(0), err
+		return &systemcontract.Punish{}, err
 	}
-	punishCount, err := systemRewards.PunishInfo(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, epoch)
+	punish, err := systemRewards.PunishInfo(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig, addr, epoch)
 	if err != nil {
-		return big.NewInt(0), err
+		return &systemcontract.Punish{}, err
 	}
 
-	return punishCount, nil
+	return punish, nil
 }
 
 type status struct {

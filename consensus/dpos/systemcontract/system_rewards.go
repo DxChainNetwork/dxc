@@ -41,6 +41,13 @@ type SysRewardsInfo struct {
 	RewardPerVote     *big.Int
 }
 
+type Punish struct {
+	Count         *big.Int
+	PunishBlocks  []*big.Int
+	KickoutBlocks []*big.Int
+	BurnRewards   []*big.Int
+}
+
 // NewSystemRewards return SystemRewards contract instance
 func NewSystemRewards() *SystemRewards {
 	return &SystemRewards{
@@ -188,30 +195,27 @@ func (s *SystemRewards) ValidatorRewardsInfo(statedb *state.StateDB, header *typ
 }
 
 // PunishInfo punishInfo function of systemRewards contract
-func (s *SystemRewards) PunishInfo(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, epoch *big.Int) (*big.Int, error) {
+func (s *SystemRewards) PunishInfo(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, addr common.Address, epoch *big.Int) (*Punish, error) {
 	method := "punishInfo"
 
 	data, err := s.abi.Pack(method, addr, epoch)
 	if err != nil {
 		log.Error("can't pack SystemRewards contract method", "method", method)
-		return big.NewInt(0), err
+		return &Punish{}, err
 	}
 	msg := vmcaller.NewLegacyMessage(header.Coinbase, &s.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
 	if err != nil {
 		log.Error("SystemRewards contract execute error", "method", method, "error", err)
-		return big.NewInt(0), err
+		return &Punish{}, err
 	}
-	ret, err := s.abi.Unpack(method, result)
+	punish := &Punish{}
+	err = s.abi.UnpackIntoInterface(punish, method, result)
+	log.Info("punish", "rst", punish)
 	if err != nil {
 		log.Error("SystemRewards contract Unpack error", "method", method, "error", err, "result", result)
-		return big.NewInt(0), err
-	}
-	punishCount, ok := ret[0].(*big.Int)
-	if !ok {
-		log.Error("SystemRewards contract format result error", "method", method, "error", err)
-		return big.NewInt(0), err
+		return &Punish{}, err
 	}
 
-	return punishCount, nil
+	return punish, nil
 }
