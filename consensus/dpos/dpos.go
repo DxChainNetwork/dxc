@@ -644,7 +644,7 @@ func (d *Dpos) Finalize(chain consensus.ChainHeaderReader, header *types.Header,
 		if err != nil {
 			return err
 		}
-		log.Info("New Epoch", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
+		log.Info("New Epoch", "header", header.Number.Uint64(), "epoch", header.Number.Uint64()/d.config.Epoch)
 
 		validatorsBytes := make([]byte, len(newEpochValidators)*common.AddressLength)
 		for i, validator := range newEpochValidators {
@@ -737,7 +737,7 @@ func (d *Dpos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *ty
 		if err != nil {
 			panic(err)
 		}
-		log.Info("New Epoch", "header", header.Number.Uint64(), "newEpochValidators", newEpochValidators)
+		log.Info("New Epoch", "header", header.Number.Uint64(), "epoch", header.Number.Uint64()/d.config.Epoch, "count", len(newEpochValidators), "newEpochValidators", newEpochValidators)
 	}
 
 	//handle system governance Proposal

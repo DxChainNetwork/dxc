@@ -20,9 +20,10 @@ type SystemRewards struct {
 
 // EpochInfo struct `epoch` in SystemRewards contract
 type EpochInfo struct {
-	BlockReward    *big.Int
-	Tvl            *big.Int
-	ValidatorCount *big.Int
+	BlockReward       *big.Int
+	Tvl               *big.Int
+	ValidatorCount    *big.Int
+	EffictiveValCount *big.Int
 }
 
 type Reward struct {
