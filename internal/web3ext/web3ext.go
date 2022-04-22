@@ -135,6 +135,12 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
+			name: 'totalVotes',
+			call: 'dpos_getTotalVotes',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'currentEpochValidators',
 			call: 'dpos_getCurrentEpochValidators',
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],

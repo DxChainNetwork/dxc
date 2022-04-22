@@ -162,6 +162,20 @@ func (api *API) GetTotalDeposit(number *rpc.BlockNumber) (*big.Int, error) {
 	return deposit, nil
 }
 
+// GetTotalVotes return total votes
+func (api *API) GetTotalVotes(number *rpc.BlockNumber) (*big.Int, error) {
+	nodeVotes := systemcontract.NewNodeVotes()
+	header, statedb, err := api.GetHeaderAndState(number)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	totalVotes, err := nodeVotes.TotalVotes(statedb, header, newChainContext(api.chain, api.dpos), api.dpos.chainConfig)
+	if err != nil {
+		return big.NewInt(0), err
+	}
+	return totalVotes, nil
+}
+
 // GetCurrentEpochValidators return current epoch validators
 func (api *API) GetCurrentEpochValidators(number *rpc.BlockNumber) ([]common.Address, error) {
 	validators := systemcontract.NewValidators()

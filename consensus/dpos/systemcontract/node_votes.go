@@ -38,6 +38,36 @@ func NewNodeVotes() *NodeVotes {
 	}
 }
 
+// TotalVotes function totalVotes
+func (n *NodeVotes) TotalVotes(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) (*big.Int, error) {
+	method := "totalVotes"
+	data, err := n.abi.Pack(method)
+
+	if err != nil {
+		log.Error("NodeVotes Pack error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &n.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		log.Error("NodeVotes contract execute error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+
+	ret, err := n.abi.Unpack(method, result)
+	if err != nil {
+		log.Error("NodeVotes contract Unpack error", "method", method, "error", err, "result", result)
+		return big.NewInt(0), err
+	}
+	value, ok := ret[0].(*big.Int)
+	if !ok {
+		log.Error("NodeVotes contract format result error", "method", method, "error", err)
+		return big.NewInt(0), err
+	}
+	return value, nil
+}
+
 // PendingVoteReward function pendingReward
 func (n *NodeVotes) PendingVoteReward(statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig, val common.Address, voter common.Address) (*big.Int, error) {
 	method := "pendingReward"
