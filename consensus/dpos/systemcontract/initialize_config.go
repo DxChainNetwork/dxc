@@ -12,11 +12,11 @@ import (
 var (
 	InitRate    = uint8(100)
 	InitDeposit = new(big.Int).Mul(big.NewInt(1e18), big.NewInt(40000000))
-	InitName    = "dxc-validator-0"      // max bytes length: 100
+	InitName    = "dxc-validator-1"      // max bytes length: 100
 	InitDetails = "initialize validator" // max bytes length: 10000
 )
 
-var MigrateOwner = common.HexToAddress("0xA88548E97AF8809aFaC9dC7a930650c117951059")
+var MigrateOwner = common.HexToAddress("0x3fe93764c06bb5d712b73ad2a385b168d69d3984")
 
 type MigrateAddrBalance struct {
 	Address common.Address        `json:"address"`
@@ -24,14 +24,7 @@ type MigrateAddrBalance struct {
 }
 
 var migrateAddrBalanceStr = `[
-	{
-		"address": "0xA88548E97AF8809aFaC9dC7a930650c117951059",
-		"balance": "10000000000000000000000"
-	},
-	{
-		"address": "0x6b246a131e2c59108C841E9bc725aCad3d3Ee3f0",
-		"balance": "10000000000000000000000"
-	}
+
 ]`
 
 func InitMigrateAddrBalance() ([]common.Address, []*big.Int) {
