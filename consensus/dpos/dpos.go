@@ -71,7 +71,7 @@ const (
 
 // Dpos delegated proof-of-stake protocol constants.
 var (
-	epochLength = uint64(28800) // Default number of blocks after which to checkpoint and reset the pending votes
+	epochLength = uint64(720) // Default number of blocks after which to checkpoint and reset the pending votes
 
 	extraVanity = 32                     // Fixed number of extra-data prefix bytes reserved for validator vanity
 	extraSeal   = crypto.SignatureLength // Fixed number of extra-data suffix bytes reserved for validator seal
