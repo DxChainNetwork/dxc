@@ -133,8 +133,8 @@ echo "your-password" > build/bin/password.txt
     "istanbulBlock": 0,
     "muirGlacierBlock": 0,
     "dpos": {
-      "period": 3,
-      "epoch": 28800
+      "period": 6,
+      "epoch": 14400
     }
   },
   "nonce": "0x0",

@@ -27,8 +27,8 @@ import (
 
 // Genesis hashes to enforce below configs on. TODO: update hash
 var (
-	MainnetGenesisHash = common.HexToHash("0x5751d1772ebc82d52d19d96157bb3f13ca8417217e3c0913adf15f04eb4cb144")
-	TestnetGenesisHash = common.HexToHash("0xb24b1124276b1250ad3b2c02623677bce3e76c1539f76dcdfe4c27ab991c1dad")
+	MainnetGenesisHash = common.HexToHash("0x498b4f36dbe76df2b4b753c0c1ca07fd7ff222dafccedcbbaa3daa0ea3a05957")
+	TestnetGenesisHash = common.HexToHash("0x6fb87d6747e81ff634562eba76184b0e4969552e4d99645601c231d9e2ea653c")
 )
 
 // TrustedCheckpoints associates each known checkpoint with the genesis hash of
@@ -60,8 +60,8 @@ var (
 		SophonBlock:         big.NewInt(0),
 
 		Dpos: &DposConfig{
-			Period: 5,
-			Epoch:  720,
+			Period: 6,
+			Epoch:  14400,
 
 			EnableDevVerification: true,
 		},
@@ -86,8 +86,8 @@ var (
 		LondonBlock:         big.NewInt(0),
 		SophonBlock:         big.NewInt(0),
 		Dpos: &DposConfig{
-			Period: 5,
-			Epoch:  720,
+			Period: 3,
+			Epoch:  28800,
 
 			EnableDevVerification: true,
 		},

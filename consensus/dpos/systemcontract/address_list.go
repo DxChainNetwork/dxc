@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	DevAdmin = common.HexToAddress("0xfd85c4d409a2625f9e18b3bb8182bc48f20603a4")
+	DevAdmin = common.HexToAddress("0xaC887b0C4277cDceb741A93c6e8516AcBA880018")
 )
 
 const (
