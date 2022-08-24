@@ -27,7 +27,7 @@ import (
 
 // Genesis hashes to enforce below configs on. TODO: update hash
 var (
-	MainnetGenesisHash = common.HexToHash("0x498b4f36dbe76df2b4b753c0c1ca07fd7ff222dafccedcbbaa3daa0ea3a05957")
+	MainnetGenesisHash = common.HexToHash("0x7b3d0baac05794d3c94594a60d1a879e9ddebf1e3f68b1ee9e747ec6788ef13d")
 	TestnetGenesisHash = common.HexToHash("0x6fb87d6747e81ff634562eba76184b0e4969552e4d99645601c231d9e2ea653c")
 )
 

@@ -2,17 +2,17 @@
 pragma solidity ^0.8.0;
 
 contract Base {
-    uint256 public constant BLOCK_SECONDS = 3;
+    uint256 public constant BLOCK_SECONDS = 6;
     /// @notice min rate. base on 100
     uint8 public constant MIN_RATE = 70;
     /// @notice max rate. base on 100
     uint8 public constant MAX_RATE = 100;
 
     /// @notice 10 * 60 / BLOCK_SECONDS
-    uint256 public constant EPOCH_BLOCKS = 28800;
+    uint256 public constant EPOCH_BLOCKS = 14400;
     /// @notice min deposit for validator
     uint256 public constant MIN_DEPOSIT = 4e7 ether;
-    uint256 public constant MAX_PUNISH_COUNT = 278;
+    uint256 public constant MAX_PUNISH_COUNT = 139;
 
     /// @notice use blocks as units in code: RATE_SET_LOCK_EPOCHS * EPOCH_BLOCKS
     uint256 public constant RATE_SET_LOCK_EPOCHS = 1;
